@@ -3,7 +3,7 @@
   <!--
     CODamageEffects — Vintage Story 1.21.x build
     Target framework : net7.0
-    overhaullib      : >= 3.0.0
+    overhaullib      : >= 1.21.0
     Game version     : 1.21.x
 
     Shared properties (ModId, ModName, ModVersion, authors, etc.) live in
@@ -23,11 +23,10 @@
   <!-- ── Mod dependency for this VS version ────────────────────────────────── -->
   <ItemGroup>
     <!--
-      overhaullib 3.x.x was the series released for VS 1.21.x.
-      Set the minimum to 3.0.0 — the first stable 1.21.x release.
-      Update if you are only targeting a later 3.x patch.
+      overhaullib 1.21.x was the series released for VS 1.21.x.
+      Set the minimum to 1.21.0 — the first stable 1.21.x release.
     -->
-    <Dependencies Include="overhaullib" Version="3.0.0" />
+    <Dependencies Include="overhaullib" Version="1.21.0" />
   </ItemGroup>
 
   <!-- ── Framework ─────────────────────────────────────────────────────────── -->

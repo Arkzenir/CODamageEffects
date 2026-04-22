@@ -191,3 +191,24 @@ benefit/penalty system. Detection is automatic; SlowTox is not a required depend
 
 The `Slow` and `Knockdown` effects use namespaced stat keys (`damageeffects:slow`,
 `damageeffects:knockdown-walk/jump`) and do not conflict with SlowTox's own walkspeed penalty.
+
+---
+
+## Building
+
+1. Copy `Properties/localSettings.props` and fill in `<GameDirectory>` (or set the
+   `VINTAGE_STORY` environment variable).
+2. Ensure `overhaullib.dll` is at `$(OverhaulLibDir)/overhaullib.dll`.
+3. `dotnet build` — output in `bin/Debug/Mods/damageeffects/`.
+4. `dotnet build -c Release` — also produces `Releases/damageeffects_1.0.0.zip`.
+
+---
+
+## Dependencies
+
+| Mod | Required | Notes |
+|---|---|---|
+| [Overhaul Library](https://mods.vintagestory.at/) (`overhaullib`) (VS 1.21.x -> 1.21.0) (VS 1.22.0 -> 2.0.3) | **Yes** | Provides `PlayerDamageModelBehavior` and `OnReceiveDamage` |
+| [SlowTox](https://mods.vintagestory.at/slowtox) (`slowtox`) | No | Auto-detected; `Intoxication` integrates with it when present |
+
+This mod is **server-side only** — clients do not need to install it.

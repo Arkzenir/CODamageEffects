@@ -3,7 +3,7 @@
   <!--
     CODamageEffects — Vintage Story 1.22.x build
     Target framework : net10.0
-    overhaullib      : >= 1.22.0
+    overhaullib      : >= 2.0.3
     Game version     : 1.22.x
 
     Shared properties (ModId, ModName, ModVersion, authors, etc.) live in
@@ -17,7 +17,7 @@
 
   <!-- ── Mod dependency for this VS version ────────────────────────────────── -->
   <ItemGroup>
-    <Dependencies Include="overhaullib" Version="1.22.0" />
+    <Dependencies Include="overhaullib" Version="2.0.3" />
   </ItemGroup>
 
   <!-- ── Framework ─────────────────────────────────────────────────────────── -->
