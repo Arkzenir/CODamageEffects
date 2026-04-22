@@ -1,0 +1,107 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    CODamageEffects — Vintage Story 1.22.x build
+    Target framework : net10.0
+    overhaullib      : >= 1.22.0
+    Game version     : 1.22.x
+
+    Shared properties (ModId, ModName, ModVersion, authors, etc.) live in
+    Directory.Build.props and are imported automatically by MSBuild.
+  -->
+
+  <!-- ── VS version label used in output paths and zip filename ────────────── -->
+  <PropertyGroup>
+    <VSVersion>1.22</VSVersion>
+  </PropertyGroup>
+
+  <!-- ── Mod dependency for this VS version ────────────────────────────────── -->
+  <ItemGroup>
+    <Dependencies Include="overhaullib" Version="1.22.0" />
+  </ItemGroup>
+
+  <!-- ── Framework ─────────────────────────────────────────────────────────── -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <!-- ── Output paths (versioned so both builds can coexist) ──────────────── -->
+  <PropertyGroup>
+    <OutputDir>bin/$(Configuration)/$(VSVersion)/Mods</OutputDir>
+    <OutputPath>$(OutputDir)/$(ModId)</OutputPath>
+  </PropertyGroup>
+
+  <!-- ── Game installation path ────────────────────────────────────────────── -->
+  <PropertyGroup>
+    <!--
+      Set the VINTAGE_STORY_1_22 environment variable, or set GameDirectory_1_22
+      in Properties/localSettings.props. Falls back to VINTAGE_STORY if the
+      version-specific variable is not set.
+    -->
+    <GameDirectory Condition="'$(GameDirectory_1_22)' != ''">$(GameDirectory_1_22)</GameDirectory>
+    <GameDirectory Condition="'$(GameDirectory)' == '' and '$(VINTAGE_STORY_1_22)' != ''">$(VINTAGE_STORY_1_22)</GameDirectory>
+    <GameDirectory Condition="'$(GameDirectory)' == ''">$(VINTAGE_STORY)</GameDirectory>
+    <OverhaulLibDir Condition="'$(OverhaulLibDir_1_22)' != ''">$(OverhaulLibDir_1_22)</OverhaulLibDir>
+    <OverhaulLibDir Condition="'$(OverhaulLibDir)' == ''">$(GameDirectory)/Mods/overhaullib</OverhaulLibDir>
+  </PropertyGroup>
+
+  <!-- ── Assembly references ──────────────────────────────────────────────── -->
+  <ItemGroup>
+    <Reference Include="VintagestoryAPI" HintPath="$(GameDirectory)/VintagestoryAPI.dll"     Private="false" />
+    <Reference Include="VintagestoryLib" HintPath="$(GameDirectory)/VintagestoryLib.dll"     Private="false" />
+    <Reference Include="VSSurvivalMod"   HintPath="$(GameDirectory)/Mods/VSSurvivalMod.dll"  Private="false" />
+    <Reference Include="VSEssentials"    HintPath="$(GameDirectory)/Mods/VSEssentials.dll"   Private="false" />
+    <Reference Include="Newtonsoft.Json" HintPath="$(GameDirectory)/Lib/Newtonsoft.Json.dll" Private="false" />
+    <Reference Include="overhaullib"     HintPath="$(OverhaulLibDir)/overhaullib.dll"         Private="false" />
+    <Reference Include="$(ExternalLibDir)/**/*.dll" Private="false"
+               Condition="Exists('$(ExternalLibDir)')" />
+  </ItemGroup>
+
+  <!-- ── Generate modinfo.json ────────────────────────────────────────────── -->
+  <Target Name="GenerateModInfo" BeforeTargets="Build">
+    <PropertyGroup>
+      <ModInfoContent>
+        {
+        "type": "$(ModType)",
+        "name": "$(ModName)",
+        "modid": "$(ModId)",
+        "version": "$(ModVersion)",
+        "description": "$(Description)",
+        "authors": [ @(ModInfoAuthors->'"%(Identity)"', ', ') ],
+        "dependencies": {
+        @(Dependencies->'"%(Identity)": "%(Version)"', ', ')
+        },
+        "side": "$(Side)",
+        "requiredOnClient": $(RequiredOnClient),
+        "requiredOnServer": $(RequiredOnServer)
+        }
+      </ModInfoContent>
+    </PropertyGroup>
+    <MakeDir Directories="$(OutputPath)" />
+    <WriteLinesToFile File="$(OutputPath)/modinfo.json"
+                      Lines="$(ModInfoContent)"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
+  </Target>
+
+  <!-- ── Symlink assets into output folder ────────────────────────────────── -->
+  <Target Name="LinkAssets" AfterTargets="GenerateModInfo" BeforeTargets="Build">
+    <RemoveDir Directories="$(OutputPath)/assets" />
+    <Exec Condition="'$(OS)' == 'Windows_NT'"
+          Command="mklink /D &quot;$(OutputPath)\assets&quot; &quot;$(AssetsDir)&quot;" />
+    <Exec Condition="'$(OS)' != 'Windows_NT'"
+          Command="ln -sf &quot;$(AssetsDir)&quot; &quot;$(OutputPath)/assets&quot;" />
+  </Target>
+
+  <!-- ── Package release zip ──────────────────────────────────────────────── -->
+  <Target Name="ZipRelease" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <MakeDir Directories="$(ProjectDir)/Releases" />
+    <Delete Files="$(ProjectDir)/Releases/$(ModId)_$(ModVersion)_vs$(VSVersion).zip" />
+    <!-- Strip debug and dependency metadata files before zipping -->
+    <Delete Files="$(OutputPath)/$(ModId).pdb" />
+    <Delete Files="$(OutputPath)/$(ModId).deps.json" />
+    <ZipDirectory SourceDirectory="$(OutputPath)"
+                  DestinationFile="$(ProjectDir)/Releases/$(ModId)_$(ModVersion)_vs$(VSVersion).zip" />
+  </Target>
+
+</Project>

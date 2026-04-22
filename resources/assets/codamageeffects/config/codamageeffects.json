@@ -1,0 +1,113 @@
+{
+  "EnableWeaponAttributeGating": true,
+  "Rules": [
+    {
+      "DamageTypes": [ "SlashingAttack" ],
+      "MinDamage": 3.0,
+      "BodyParts": [ "Torso", "LeftArm", "RightArm", "LeftHand", "RightHand" ],
+      "ChancePct": 40.0,
+      "Effects": [
+        { "Type": "Bleed", "Strength": 1.0, "DurationSec": 12.0 }
+      ]
+    },
+    {
+      "DamageTypes": [ "PiercingAttack" ],
+      "MinDamage": 4.0,
+      "BodyParts": [ "Head", "Neck" ],
+      "ChancePct": 60.0,
+      "Effects": [
+        { "Type": "Bleed", "Strength": 1.5, "DurationSec": 8.0 },
+        { "Type": "Slow",  "Strength": 0.4, "DurationSec": 5.0 }
+      ]
+    },
+    {
+      "DamageTypes": [ "BluntAttack" ],
+      "MinDamage": 5.0,
+      "BodyParts": [ "Head" ],
+      "ChancePct": 50.0,
+      "Effects": [
+        { "Type": "Knockdown", "Strength": 1.0, "DurationSec": 3.0 },
+        { "Type": "Slow",      "Strength": 0.5, "DurationSec": 6.0 }
+      ]
+    },
+    {
+      "DamageTypes": [ "BluntAttack" ],
+      "MinDamage": 2.0,
+      "BodyParts": [ "LeftLeg", "RightLeg", "LeftFoot", "RightFoot" ],
+      "ChancePct": 35.0,
+      "Effects": [
+        { "Type": "Slow", "Strength": 0.6, "DurationSec": 8.0 }
+      ]
+    },
+    {
+      "DamageTypes": [ "PiercingAttack", "SlashingAttack", "BluntAttack" ],
+      "MinDamage": 8.0,
+      "BodyParts": [],
+      "ChancePct": 20.0,
+      "Effects": [
+        { "Type": "Intoxication", "Strength": 0.5, "DurationSec": 10.0 }
+      ]
+    },
+    {
+      "DamageTypes": [ "PiercingAttack" ],
+      "MinDamage": 1.0,
+      "BodyParts": [],
+      "ChancePct": 100.0,
+      "Effects": [
+        {
+          "Type": "Poison",
+          "Strength": 0.5,
+          "DurationSec": 15.0,
+          "RequireWeaponAttribute": {
+            "Key": "codamageeffects:poisoned",
+            "Value": "true"
+          }
+        }
+      ]
+    },
+    {
+      "DamageTypes": [ "BluntAttack" ],
+      "MinDamage": 6.0,
+      "BodyParts": [],
+      "AttackSource": "Melee",
+      "Handedness": "MainHand",
+      "ChancePct": 50.0,
+      "Effects": [
+        { "Type": "Dismount", "Strength": 1.0, "DurationSec": 0.0 }
+      ]
+    },
+    {
+      "DamageTypes": [ "SlashingAttack", "BluntAttack" ],
+      "MinDamage": 6.0,
+      "BodyParts": [],
+      "AttackSource": "Melee",
+      "WeaponGrip": "TwoHandedOnly",
+      "ChancePct": 45.0,
+      "Effects": [
+        { "Type": "Knockdown", "Strength": 1.0, "DurationSec": 2.0 },
+        { "Type": "Slow",      "Strength": 0.5, "DurationSec": 5.0 }
+      ]
+    },
+    {
+      "DamageTypes": [ "PiercingAttack" ],
+      "MinDamage": 3.0,
+      "BodyParts": [ "LeftArm", "RightArm", "LeftLeg", "RightLeg" ],
+      "AttackSource": "Ranged",
+      "ChancePct": 50.0,
+      "Effects": [
+        { "Type": "Bleed", "Strength": 0.6, "DurationSec": 8.0 }
+      ]
+    },
+    {
+      "DamageTypes": [ "PiercingAttack" ],
+      "MinDamage": 2.0,
+      "BodyParts": [ "LeftLeg", "RightLeg", "LeftArm", "RightArm" ],
+      "AttackSource": "Melee",
+      "WeaponCodes": [ "game:spear-*" ],
+      "ChancePct": 55.0,
+      "Effects": [
+        { "Type": "Bleed", "Strength": 0.8, "DurationSec": 10.0 }
+      ]
+    }
+  ]
+}
