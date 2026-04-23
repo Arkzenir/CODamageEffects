@@ -1,10 +1,11 @@
 <Project>
 
-  <!-- ══════════════════════════════════════════════════════════════════════
-       Shared properties for CODamageEffects
-       Imported automatically by MSBuild from both CODamageEffects_1.21.csproj
-       and CODamageEffects_1.22.csproj.
-       ══════════════════════════════════════════════════════════════════════ -->
+  <!--
+    ══════════════════════════════════════════════════════════════════════════
+    Directory.Build.props — shared mod identity & build settings
+    Imported automatically by MSBuild before every .csproj in this folder.
+    ══════════════════════════════════════════════════════════════════════════
+  -->
 
   <!-- ── Mod identity ─────────────────────────────────────────────────────── -->
   <PropertyGroup>
@@ -12,18 +13,18 @@
     <ModType>code</ModType>
     <ModVersion>1.0.0</ModVersion>
     <ModId>codamageeffects</ModId>
-    <Description>Applies configurable status effects (bleed, slow, intoxication, knockdown, dismount, poison, burning) to players on hit. Filter by damage type, body part, weapon type, grip, handedness, and attack source. Requires Overhaul Library.</Description>
+    <Description>Applies configurable status effects (bleed, slow, intoxication, knockdown, dismount, poison, burning) to players on hit.</Description>
     <Side>server</Side>
     <RequiredOnClient>false</RequiredOnClient>
     <RequiredOnServer>true</RequiredOnServer>
   </PropertyGroup>
 
-  <!-- ── Author ────────────────────────────────────────────────────────────── -->
+  <!-- ── Authors ───────────────────────────────────────────────────────────── -->
   <ItemGroup>
-    <ModInfoAuthors Include="YourNameHere" />
+    <ModInfoAuthors Include="Arkzenir" />
   </ItemGroup>
 
-  <!-- ── Shared build settings ────────────────────────────────────────────── -->
+  <!-- ── Shared compiler settings ─────────────────────────────────────────── -->
   <PropertyGroup>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -34,19 +35,17 @@
   <PropertyGroup>
     <ProjectDir>$(MSBuildProjectDirectory)</ProjectDir>
     <AssetsDir>$(ProjectDir)/resources/assets</AssetsDir>
-    <ExternalLibDir>$(ProjectDir)/external</ExternalLibDir>
     <!--
-      OutputDir and OutputPath are set per-project so each build goes into its
-      own versioned subfolder:
-        bin/Debug/1.22/Mods/codamageeffects/
-        bin/Debug/1.21/Mods/codamageeffects/
+      Drop any extra DLLs (e.g. optional soft-dependency assemblies) into
+      the /external folder and they will be referenced automatically.
     -->
+    <ExternalLibDir>$(ProjectDir)/external</ExternalLibDir>
   </PropertyGroup>
 
   <!-- ── Local path overrides ──────────────────────────────────────────────── -->
   <!--
-    Fill in Properties/localSettings.props with your own game paths.
-    The file is git-ignored; each developer keeps their own copy.
+    Copy Properties/localSettings.props.template to Properties/localSettings.props
+    and fill in your own machine paths.  The file is git-ignored.
   -->
   <Import Project="Properties/localSettings.props"
           Condition="Exists('Properties/localSettings.props')" />

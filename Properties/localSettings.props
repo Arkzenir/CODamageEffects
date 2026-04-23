@@ -1,42 +1,11 @@
 <Project>
   <PropertyGroup>
-    <!--
-      ══════════════════════════════════════════════════════════════════════
-      VS 1.22 paths  (used by CODamageEffects_1.22.csproj)
-      ══════════════════════════════════════════════════════════════════════
-      Absolute path to your Vintage Story 1.22 installation directory.
-      Examples:
-        Windows : C:\Program Files\Vintagestory
-        Linux   : /home/yourname/vintagestory_1.22
-      Alternatively set the VINTAGE_STORY_1_22 environment variable.
-    -->
-    <GameDirectory_1_22></GameDirectory_1_22>
+    <!-- ── VS 1.22 ────────────────────────────────────────────────────────── -->
+    <GameDirectory_1_22>E:\VSLauncher\VSLGameVersions\1.22.0</GameDirectory_1_22>
+    <OverhaulLibDir_1_22>$(MSBuildThisFileDirectory)\..\deps\overhaullib-1.22</OverhaulLibDir_1_22>
 
-    <!--
-      Path to the overhaullib 1.22.x mod directory.
-      Leave blank to use: $(GameDirectory_1_22)/Mods/overhaullib
-      Typical locations:
-        Windows : %AppData%\VintagestoryData\Mods\overhaullib
-        Linux   : ~/.config/VintagestoryData/Mods/overhaullib
-    -->
-    <OverhaulLibDir_1_22></OverhaulLibDir_1_22>
-
-    <!--
-      ══════════════════════════════════════════════════════════════════════
-      VS 1.21 paths  (used by CODamageEffects_1.21.csproj)
-      ══════════════════════════════════════════════════════════════════════
-      Absolute path to your Vintage Story 1.21 installation directory.
-      Examples:
-        Windows : C:\Program Files\Vintagestory_1.21
-        Linux   : /home/yourname/vintagestory_1.21
-      Alternatively set the VINTAGE_STORY_1_21 environment variable.
-    -->
-    <GameDirectory_1_21></GameDirectory_1_21>
-
-    <!--
-      Path to the overhaullib 1.21.x mod directory.
-      Leave blank to use: $(GameDirectory_1_21)/Mods/overhaullib
-    -->
-    <OverhaulLibDir_1_21></OverhaulLibDir_1_21>
+    <!-- ── VS 1.21 ────────────────────────────────────────────────────────── -->
+    <GameDirectory_1_21>E:\VSLauncher\VSLGameVersions\1.21.5</GameDirectory_1_21>
+    <OverhaulLibDir_1_21>$(MSBuildThisFileDirectory)\..\deps\overhaullib-1.21</OverhaulLibDir_1_21>
   </PropertyGroup>
 </Project>

@@ -2,120 +2,54 @@
 
   <!--
     CODamageEffects — Vintage Story 1.21.x build
-    Target framework : net7.0
-    overhaullib      : >= 1.21.0
-    Game version     : 1.21.x
+    ─────────────────────────────────────────────
+    .NET target  : net8.0   (VS 1.21 ships with .NET 8)
+    overhaullib  : >= 1.21.0
 
-    Shared properties (ModId, ModName, ModVersion, authors, etc.) live in
-    Directory.Build.props and are imported automatically by MSBuild.
+    All shared logic (output paths, references, modinfo, zip) lives in
+    Common.Build.targets.  Only version-specific declarations belong here.
 
-    NOTE: The 1.21.x build requires a separate VS 1.21.x installation and a
-    separate installation of the overhaullib 3.x release for 1.21.
-    Set GameDirectory_1_21 (and optionally OverhaulLibDir_1_21) in
-    Properties/localSettings.props to point at your 1.21.x game copy.
+    To build:
+      dotnet build CODamageEffects_1.21.csproj
+      dotnet build CODamageEffects_1.21.csproj -c Release   ← also zips
   -->
 
-  <!-- ── VS version label used in output paths and zip filename ────────────── -->
+  <!-- ── VS version label ──────────────────────────────────────────────────── -->
   <PropertyGroup>
     <VSVersion>1.21</VSVersion>
   </PropertyGroup>
 
-  <!-- ── Mod dependency for this VS version ────────────────────────────────── -->
+  <!-- ── Target framework ──────────────────────────────────────────────────── -->
+  <PropertyGroup>
+    <!-- VS 1.21.x targets .NET 8. Install SDK: https://dotnet.microsoft.com/download/dotnet/8.0 -->
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <!-- ── Mod dependency (controls modinfo.json "dependencies" block) ────────── -->
   <ItemGroup>
-    <!--
-      overhaullib 1.21.x was the series released for VS 1.21.x.
-      Set the minimum to 1.21.0 — the first stable 1.21.x release.
-    -->
     <Dependencies Include="overhaullib" Version="1.21.0" />
   </ItemGroup>
 
-  <!-- ── Framework ─────────────────────────────────────────────────────────── -->
+  <!--
+    ── Game & overhaullib path resolution ────────────────────────────────────
+    Priority (first non-empty wins):
+      1. GameDirectory_1_21 / OverhaulLibDir_1_21  from localSettings.props
+      2. VINTAGE_STORY_1_21                         environment variable
+      3. VINTAGE_STORY                              environment variable (global fallback)
+    OverhaulLibDir falls back to $(GameDirectory)/Mods/overhaullib in Common.Build.targets.
+    The vendored DLL in deps/overhaullib-1.21/ is the last-resort fallback.
+  -->
   <PropertyGroup>
-    <!--
-      VS 1.21.x used .NET 7. You need the .NET 7 SDK installed alongside .NET 10.
-      Install from: https://dotnet.microsoft.com/download/dotnet/7.0
-    -->
-    <TargetFramework>net7.0</TargetFramework>
-  </PropertyGroup>
-
-  <!-- ── Output paths (versioned so both builds can coexist) ──────────────── -->
-  <PropertyGroup>
-    <OutputDir>bin/$(Configuration)/$(VSVersion)/Mods</OutputDir>
-    <OutputPath>$(OutputDir)/$(ModId)</OutputPath>
-  </PropertyGroup>
-
-  <!-- ── Game installation path ────────────────────────────────────────────── -->
-  <PropertyGroup>
-    <!--
-      Set the VINTAGE_STORY_1_21 environment variable, or set GameDirectory_1_21
-      in Properties/localSettings.props. Falls back to VINTAGE_STORY if the
-      version-specific variable is not set.
-      You need a separate VS 1.21.x installation to resolve the correct DLLs.
-    -->
     <GameDirectory Condition="'$(GameDirectory_1_21)' != ''">$(GameDirectory_1_21)</GameDirectory>
     <GameDirectory Condition="'$(GameDirectory)' == '' and '$(VINTAGE_STORY_1_21)' != ''">$(VINTAGE_STORY_1_21)</GameDirectory>
     <GameDirectory Condition="'$(GameDirectory)' == ''">$(VINTAGE_STORY)</GameDirectory>
+
     <OverhaulLibDir Condition="'$(OverhaulLibDir_1_21)' != ''">$(OverhaulLibDir_1_21)</OverhaulLibDir>
-    <OverhaulLibDir Condition="'$(OverhaulLibDir)' == ''">$(GameDirectory)/Mods/overhaullib</OverhaulLibDir>
+    <!-- Final fallback: bundled DLL in repo -->
+    <OverhaulLibDir Condition="'$(OverhaulLibDir)' == ''">$(MSBuildProjectDirectory)/deps/overhaullib-1.21</OverhaulLibDir>
   </PropertyGroup>
 
-  <!-- ── Assembly references ──────────────────────────────────────────────── -->
-  <ItemGroup>
-    <Reference Include="VintagestoryAPI" HintPath="$(GameDirectory)/VintagestoryAPI.dll"     Private="false" />
-    <Reference Include="VintagestoryLib" HintPath="$(GameDirectory)/VintagestoryLib.dll"     Private="false" />
-    <Reference Include="VSSurvivalMod"   HintPath="$(GameDirectory)/Mods/VSSurvivalMod.dll"  Private="false" />
-    <Reference Include="VSEssentials"    HintPath="$(GameDirectory)/Mods/VSEssentials.dll"   Private="false" />
-    <Reference Include="Newtonsoft.Json" HintPath="$(GameDirectory)/Lib/Newtonsoft.Json.dll" Private="false" />
-    <Reference Include="overhaullib"     HintPath="$(OverhaulLibDir)/overhaullib.dll"         Private="false" />
-    <Reference Include="$(ExternalLibDir)/**/*.dll" Private="false"
-               Condition="Exists('$(ExternalLibDir)')" />
-  </ItemGroup>
-
-  <!-- ── Generate modinfo.json ────────────────────────────────────────────── -->
-  <Target Name="GenerateModInfo" BeforeTargets="Build">
-    <PropertyGroup>
-      <ModInfoContent>
-        {
-        "type": "$(ModType)",
-        "name": "$(ModName)",
-        "modid": "$(ModId)",
-        "version": "$(ModVersion)",
-        "description": "$(Description)",
-        "authors": [ @(ModInfoAuthors->'"%(Identity)"', ', ') ],
-        "dependencies": {
-        @(Dependencies->'"%(Identity)": "%(Version)"', ', ')
-        },
-        "side": "$(Side)",
-        "requiredOnClient": $(RequiredOnClient),
-        "requiredOnServer": $(RequiredOnServer)
-        }
-      </ModInfoContent>
-    </PropertyGroup>
-    <MakeDir Directories="$(OutputPath)" />
-    <WriteLinesToFile File="$(OutputPath)/modinfo.json"
-                      Lines="$(ModInfoContent)"
-                      Overwrite="true"
-                      WriteOnlyWhenDifferent="true" />
-  </Target>
-
-  <!-- ── Symlink assets into output folder ────────────────────────────────── -->
-  <Target Name="LinkAssets" AfterTargets="GenerateModInfo" BeforeTargets="Build">
-    <RemoveDir Directories="$(OutputPath)/assets" />
-    <Exec Condition="'$(OS)' == 'Windows_NT'"
-          Command="mklink /D &quot;$(OutputPath)\assets&quot; &quot;$(AssetsDir)&quot;" />
-    <Exec Condition="'$(OS)' != 'Windows_NT'"
-          Command="ln -sf &quot;$(AssetsDir)&quot; &quot;$(OutputPath)/assets&quot;" />
-  </Target>
-
-  <!-- ── Package release zip ──────────────────────────────────────────────── -->
-  <Target Name="ZipRelease" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
-    <MakeDir Directories="$(ProjectDir)/Releases" />
-    <Delete Files="$(ProjectDir)/Releases/$(ModId)_$(ModVersion)_vs$(VSVersion).zip" />
-    <!-- Strip debug and dependency metadata files before zipping -->
-    <Delete Files="$(OutputPath)/$(ModId).pdb" />
-    <Delete Files="$(OutputPath)/$(ModId).deps.json" />
-    <ZipDirectory SourceDirectory="$(OutputPath)"
-                  DestinationFile="$(ProjectDir)/Releases/$(ModId)_$(ModVersion)_vs$(VSVersion).zip" />
-  </Target>
+  <!-- ── Shared build logic ────────────────────────────────────────────────── -->
+  <Import Project="Common.Build.targets" />
 
 </Project>

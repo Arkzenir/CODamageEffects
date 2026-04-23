@@ -208,7 +208,7 @@ The `Slow` and `Knockdown` effects use namespaced stat keys (`damageeffects:slow
 
 | Mod | Required | Notes |
 |---|---|---|
-| [Overhaul Library](https://mods.vintagestory.at/) (`overhaullib`) (VS 1.21.x -> 1.21.0) (VS 1.22.0 -> 2.0.3) | **Yes** | Provides `PlayerDamageModelBehavior` and `OnReceiveDamage` |
-| [SlowTox](https://mods.vintagestory.at/slowtox) (`slowtox`) | No | Auto-detected; `Intoxication` integrates with it when present |
+| [Overhaul Library](https://mods.vintagestory.at/overhaullib) (`overhaullib`) (VS 1.21.x -> 1.20.x +) (VS 1.22.0 -> 2.0.3 +) | **Yes** | Provides `PlayerDamageModelBehavior` and `OnReceiveDamage` |
+| [SlowTox](https://mods.vintagestory.at/slowtox) (`slowtox`) | No | Auto-detected; `Intoxication` effect application logic integrates with it when present |
 
 This mod is **server-side only** — clients do not need to install it.
