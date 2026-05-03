@@ -22,7 +22,8 @@ public class DamageEffectsModSystem : ModSystem
         _effectsSystem = new DamageEffectsSystem(api, Config);
 
         api.Event.PlayerNowPlaying += OnPlayerNowPlaying;
-        api.Event.PlayerLeave += OnPlayerLeave;
+        api.Event.PlayerLeave      += OnPlayerLeave;
+        api.Event.PlayerDeath      += OnPlayerDeath;
     }
 
     public override void Dispose()
@@ -30,7 +31,8 @@ public class DamageEffectsModSystem : ModSystem
         if (_serverApi != null)
         {
             _serverApi.Event.PlayerNowPlaying -= OnPlayerNowPlaying;
-            _serverApi.Event.PlayerLeave -= OnPlayerLeave;
+            _serverApi.Event.PlayerLeave      -= OnPlayerLeave;
+            _serverApi.Event.PlayerDeath      -= OnPlayerDeath;
         }
         _effectsSystem?.Dispose();
     }
@@ -71,6 +73,11 @@ public class DamageEffectsModSystem : ModSystem
     }
 
     private void OnPlayerLeave(IServerPlayer player)
+    {
+        _effectsSystem?.RemovePlayer(player);
+    }
+
+    private void OnPlayerDeath(IServerPlayer player, DamageSource damageSource)
     {
         _effectsSystem?.RemovePlayer(player);
     }
