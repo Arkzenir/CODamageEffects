@@ -117,8 +117,8 @@ public class DamageEffectsModSystem : ModSystem
 
     private static float ResolveHealingHealth(CollectibleObject col)
     {
-        BehaviorHealingItem? behavior = col.GetCollectibleBehavior<BehaviorHealingItem>(withInheritance: true);
-        return behavior != null && behavior.Config.Health > 0f ? behavior.Config.Health : 0f;
+        CollectibleBehaviorHealingItem? behavior = col.GetCollectibleBehavior<CollectibleBehaviorHealingItem>(withInheritance: true);
+        return behavior != null && behavior.Health > 0f ? behavior.Health : 0f;
     }
 
     // ── Config ─────────────────────────────────────────────────────────────────
