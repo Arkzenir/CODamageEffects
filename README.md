@@ -408,17 +408,8 @@ The full namespaced form is identical and also accepted:
 
 ## Building
 
-1. Copy `Properties/localSettings.props.template` to `Properties/localSettings.props` and fill in `<GameDirectory>`.
-2. From the workspace root:
-
-```powershell
-# Debug build (VS 1.21 and 1.22 simultaneously)
-.\scripts\vs-workspace.ps1 build debug
-
-# Release — produces zips in Releases/
-.\scripts\vs-workspace.ps1 build release
-```
-
-Output (debug): `bin/Debug/{vsver}/Mods/codamageeffects/`
-
-Output (release): `Releases/codamageeffects_{version}_vs{vsver}.zip`
+1. Copy `Properties/localSettings.props` and fill in `<GameDirectory>` (or set the
+   `VINTAGE_STORY` environment variable).
+2. Ensure `overhaullib.dll` is at `$(OverhaulLibDir)/overhaullib.dll`.
+3. `dotnet build` — output in `bin/Debug/Mods/damageeffects/`.
+4. `dotnet build -c Release` — also produces `Releases/damageeffects_1.0.0.zip`.
