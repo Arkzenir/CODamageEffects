@@ -1,5 +1,4 @@
 {
-  "EnableWeaponAttributeGating": true,
   "Rules": [
     {
       "DamageTypes": [ "SlashingAttack" ],
@@ -52,17 +51,12 @@
       "DamageTypes": [ "PiercingAttack" ],
       "MinDamage": 1.0,
       "BodyParts": [],
+      "RequireWeaponStackAttributes": [
+        { "Key": "codamageeffects:poisoned", "Value": "true" }
+      ],
       "ChancePct": 100.0,
       "Effects": [
-        {
-          "Type": "Poison",
-          "Strength": 0.5,
-          "DurationSec": 15.0,
-          "RequireWeaponAttribute": {
-            "Key": "codamageeffects:poisoned",
-            "Value": "true"
-          }
-        }
+        { "Type": "Poison", "Strength": 0.5, "DurationSec": 15.0 }
       ]
     },
     {
@@ -107,6 +101,30 @@
       "ChancePct": 55.0,
       "Effects": [
         { "Type": "Bleed", "Strength": 0.8, "DurationSec": 10.0 }
+      ]
+    }
+  ],
+  "RuleGroups": [
+    {
+      "Name": "Slashing limb bleeds",
+      "SharedEffects": [
+        { "Type": "Bleed", "Strength": 0.7, "DurationSec": 9.0 }
+      ],
+      "Rules": [
+        {
+          "DamageTypes": [ "SlashingAttack" ],
+          "MinDamage": 2.0,
+          "BodyParts": [ "LeftArm", "RightArm", "LeftHand", "RightHand" ],
+          "ChancePct": 30.0,
+          "Effects": []
+        },
+        {
+          "DamageTypes": [ "SlashingAttack" ],
+          "MinDamage": 2.0,
+          "BodyParts": [ "LeftLeg", "RightLeg", "LeftFoot", "RightFoot" ],
+          "ChancePct": 25.0,
+          "Effects": []
+        }
       ]
     }
   ]

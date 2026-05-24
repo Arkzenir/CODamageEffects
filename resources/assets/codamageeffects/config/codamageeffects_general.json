@@ -1,0 +1,12 @@
+{
+  "EnablePvE": true,
+  "EnablePvP": true,
+  "EnableWeaponAttributeGating": true,
+  "UseSlowToxIfAvailable": true,
+  "EnableHealingReduction": true,
+  "HealingDurationReductionPerHp": 2.0,
+  "HealingStrengthReductionPerHp": 0.05,
+  "EnableHealingReductionActualGain": false,
+  "ActualGainDurationReductionPerHp": 2.0,
+  "ActualGainStrengthReductionPerHp": 0.05
+}

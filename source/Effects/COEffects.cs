@@ -20,6 +20,9 @@ public interface IActiveEffect
     /// </summary>
     bool IsExpired { get; }
 
+    /// <summary>Human-readable summary of current state, shown by the /codamageeffects list command.</summary>
+    string Description { get; }
+
     /// <summary>Called every server tick (~10 Hz) while the effect is active.</summary>
     void Tick(float deltaTime);
 
@@ -31,6 +34,13 @@ public interface IActiveEffect
     /// Should extend duration and escalate strength as appropriate.
     /// </summary>
     void Refresh(EffectConfig config);
+
+    /// <summary>
+    /// Called when the player receives healing. Reduces effect duration and strength
+    /// proportionally to the heal amount. Expired effects will be cleaned up by the
+    /// next server tick.
+    /// </summary>
+    void ReduceFromHealing(float healAmount, float durationReductionPerHp, float strengthReductionPerHp);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -43,13 +53,13 @@ public static class EffectFactory
     /// Creates the effect described by <paramref name="config"/>, or returns
     /// <c>null</c> if the type name is not recognised.
     /// </summary>
-    public static IActiveEffect? Create(EffectConfig config, IServerPlayer player, ICoreServerAPI api)
+    public static IActiveEffect? Create(EffectConfig config, IServerPlayer player, ICoreServerAPI api, GeneralConfig generalConfig)
     {
         return config.Type.ToLowerInvariant() switch
         {
             "bleed"        => new BleedEffect(config, player, api),
             "slow"         => new SlowEffect(config, player, api),
-            "intoxication" => new IntoxicationEffect(config, player, api),
+            "intoxication" => new IntoxicationEffect(config, player, api, generalConfig.UseSlowToxIfAvailable),
             "knockdown"    => new KnockdownEffect(config, player, api),
             "dismount"     => new DismountEffect(config, player, api),
             "poison"       => new PoisonEffect(config, player, api),
@@ -67,8 +77,11 @@ public abstract class BaseTimedEffect : IActiveEffect
 {
     public abstract string TypeName { get; }
 
-    /// <summary>True once the elapsed time has reached the configured duration.</summary>
-    public bool IsExpired => _elapsed >= _duration;
+    /// <summary>True once the elapsed time has reached the configured duration, or strength has been reduced to zero.</summary>
+    public bool IsExpired => _elapsed >= _duration || _strength <= 0f;
+
+    public virtual string Description =>
+        $"{TypeName}: strength={_strength:F2}, {MathF.Max(0f, _duration - _elapsed):F1}s remaining";
 
     protected readonly IServerPlayer Player;
     protected readonly ICoreServerAPI Api;
@@ -89,13 +102,22 @@ public abstract class BaseTimedEffect : IActiveEffect
 
     /// <summary>
     /// Default refresh: reset the elapsed timer, keep whichever duration/strength is greater.
-    /// Override when additional work is needed on escalation (e.g. re-applying a stat).
     /// </summary>
     public virtual void Refresh(EffectConfig cfg)
     {
         _elapsed  = 0f;
         _duration = MathF.Max(_duration, cfg.DurationSec);
         _strength = MathF.Max(_strength, cfg.Strength);
+    }
+
+    /// <summary>
+    /// Default healing reduction: subtracts from remaining duration and strength.
+    /// Subclasses that apply stats must override to update the applied stat.
+    /// </summary>
+    public virtual void ReduceFromHealing(float healAmount, float durationReductionPerHp, float strengthReductionPerHp)
+    {
+        _duration = MathF.Max(0f, _duration - healAmount * durationReductionPerHp);
+        _strength = MathF.Max(0f, _strength - healAmount * strengthReductionPerHp);
     }
 
     /// <summary>Send a chat notification visible only to this player.</summary>
@@ -134,11 +156,11 @@ public sealed class BleedEffect : BaseTimedEffect
 
         entity.ReceiveDamage(new DamageSource
         {
-            Source          = EnumDamageSource.Internal,
-            Type            = EnumDamageType.Injury,
-            DamageTier      = 0,
+            Source            = EnumDamageSource.Internal,
+            Type              = EnumDamageType.Injury,
+            DamageTier        = 0,
             KnockbackStrength = 0f,
-            IgnoreInvFrames = true
+            IgnoreInvFrames   = true
         }, _strength);
 
         Notify(Player, $"You are bleeding! ({_strength:F1} hp)");
@@ -179,6 +201,20 @@ public sealed class SlowEffect : BaseTimedEffect
         }
     }
 
+    public override void ReduceFromHealing(float healAmount, float durationReductionPerHp, float strengthReductionPerHp)
+    {
+        float previous = _strength;
+        base.ReduceFromHealing(healAmount, durationReductionPerHp, strengthReductionPerHp);
+
+        // If strength decreased and the effect is still running, update the applied stat.
+        if (_strength < previous - 0.001f && !IsExpired && _strength > 0f)
+        {
+            RemoveStat();
+            ApplyStat();
+        }
+        // If IsExpired or strength reached 0, Remove() via the tick loop will clean up.
+    }
+
     private void ApplyStat()
     {
         if (_applied) return;
@@ -202,13 +238,13 @@ public sealed class SlowEffect : BaseTimedEffect
 /// Applies a dazed/disoriented state for the duration.
 ///
 /// <para><b>SlowTox compatibility:</b> When SlowTox (modid: <c>slowtox</c>) is loaded
-/// this effect routes through SlowTox's public WatchedAttribute API:</para>
+/// and <see cref="GeneralConfig.UseSlowToxIfAvailable"/> is <c>true</c>, this effect
+/// routes through SlowTox's public WatchedAttribute API:</para>
 /// <list type="bullet">
 ///   <item>On apply  → adds <c>Strength</c> to <c>slowtox:newToxins</c></item>
 ///   <item>On remove → adds the same amount to <c>slowtox:detoxicants</c> to cancel it</item>
 /// </list>
-/// <para>The effect then participates in SlowTox's tolerance and metabolism system rather
-/// than conflicting with it. SlowTox is detected at runtime and is not a hard dependency.</para>
+/// <para>Otherwise the vanilla <c>intoxication</c> stat is used.</para>
 /// </summary>
 public sealed class IntoxicationEffect : BaseTimedEffect
 {
@@ -224,10 +260,10 @@ public sealed class IntoxicationEffect : BaseTimedEffect
     // SlowTox path — track exactly what we injected so we can antidote it
     private float _injectedToxins;
 
-    public IntoxicationEffect(EffectConfig cfg, IServerPlayer player, ICoreServerAPI api)
+    public IntoxicationEffect(EffectConfig cfg, IServerPlayer player, ICoreServerAPI api, bool useSlowToxIfAvailable)
         : base(cfg, player, api)
     {
-        _slowToxPresent = api.ModLoader.IsModEnabled("slowtox");
+        _slowToxPresent = useSlowToxIfAvailable && api.ModLoader.IsModEnabled("slowtox");
         Apply();
     }
 
@@ -246,6 +282,33 @@ public sealed class IntoxicationEffect : BaseTimedEffect
         float delta = _strength - previous;
         if (_slowToxPresent) InjectSlowToxToxins(delta);
         else                 { RemoveVanillaStat(); ApplyVanillaStat(); }
+    }
+
+    public override void ReduceFromHealing(float healAmount, float durationReductionPerHp, float strengthReductionPerHp)
+    {
+        float previousStrength = _strength;
+        base.ReduceFromHealing(healAmount, durationReductionPerHp, strengthReductionPerHp);
+        float strengthDelta = previousStrength - _strength;
+
+        if (strengthDelta <= 0.001f) return;
+
+        if (_slowToxPresent)
+        {
+            // Counter a portion of the injected toxins with detoxicants
+            float toAntidote = MathF.Min(strengthDelta, _injectedToxins);
+            if (toAntidote > 0f && Player.Entity != null)
+            {
+                float current = Player.Entity.WatchedAttributes.GetFloat("slowtox:detoxicants", 0f);
+                Player.Entity.WatchedAttributes.SetFloat("slowtox:detoxicants", current + toAntidote);
+                Player.Entity.WatchedAttributes.MarkPathDirty("slowtox:detoxicants");
+                _injectedToxins -= toAntidote;
+            }
+        }
+        else if (!IsExpired && _strength > 0f)
+        {
+            RemoveVanillaStat();
+            ApplyVanillaStat();
+        }
     }
 
     // ── Shared ────────────────────────────────────────────────────────────────
@@ -300,6 +363,7 @@ public sealed class IntoxicationEffect : BaseTimedEffect
 /// <summary>
 /// Immobilises the player for <c>DurationSec</c> seconds via near-total walkspeed
 /// and jump debuffs applied as stats. <c>Strength</c> is not used; the effect is binary.
+/// Healing reduces the remaining duration via the base <see cref="BaseTimedEffect.ReduceFromHealing"/> impl.
 /// </summary>
 public sealed class KnockdownEffect : BaseTimedEffect
 {
@@ -338,8 +402,9 @@ public sealed class KnockdownEffect : BaseTimedEffect
 /// </summary>
 public sealed class DismountEffect : IActiveEffect
 {
-    public string TypeName  => "Dismount";
-    public bool   IsExpired => true;    // instant — never stored, never ticked
+    public string TypeName   => "Dismount";
+    public bool   IsExpired  => true;    // instant — never stored, never ticked
+    public string Description => "Dismount (instant)";
 
     public DismountEffect(EffectConfig cfg, IServerPlayer player, ICoreServerAPI api)
     {
@@ -358,6 +423,7 @@ public sealed class DismountEffect : IActiveEffect
     public void Tick(float deltaTime)   { }
     public void Remove()                { }
     public void Refresh(EffectConfig c) { }
+    public void ReduceFromHealing(float healAmount, float durationReductionPerHp, float strengthReductionPerHp) { }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -392,11 +458,11 @@ public sealed class PoisonEffect : BaseTimedEffect
 
         entity.ReceiveDamage(new DamageSource
         {
-            Source          = EnumDamageSource.Internal,
-            Type            = EnumDamageType.Poison,
-            DamageTier      = 0,
+            Source            = EnumDamageSource.Internal,
+            Type              = EnumDamageType.Poison,
+            DamageTier        = 0,
             KnockbackStrength = 0f,
-            IgnoreInvFrames = true
+            IgnoreInvFrames   = true
         }, _strength);
 
         Notify(Player, $"You are poisoned! ({_strength:F1} hp)");
@@ -434,11 +500,11 @@ public sealed class BurningEffect : BaseTimedEffect
 
         entity.ReceiveDamage(new DamageSource
         {
-            Source          = EnumDamageSource.Internal,
-            Type            = EnumDamageType.Fire,
-            DamageTier      = 0,
+            Source            = EnumDamageSource.Internal,
+            Type              = EnumDamageType.Fire,
+            DamageTier        = 0,
             KnockbackStrength = 0f,
-            IgnoreInvFrames = true
+            IgnoreInvFrames   = true
         }, _strength);
 
         Notify(Player, $"You are burning! ({_strength:F1} hp)");

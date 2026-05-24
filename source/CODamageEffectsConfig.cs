@@ -11,148 +11,268 @@ namespace CODamageEffects;
 
 public class DamageEffectsConfig
 {
+    /// <summary>Global behaviour switches and mod-compatibility settings.</summary>
+    public GeneralConfig General { get; set; } = new();
+
     /// <summary>
-    /// Rules evaluated every time a player takes damage.
+    /// Rules that fire when the attacker is <b>not</b> a player (AI / mob combat).
+    /// Only evaluated when <see cref="GeneralConfig.EnablePvE"/> is <c>true</c>.
+    /// </summary>
+    public DamageEffectRuleSetConfig PvE { get; set; } = new();
+
+    /// <summary>
+    /// Rules that fire when the attacker <b>is</b> a player (PvP combat).
+    /// Only evaluated when <see cref="GeneralConfig.EnablePvP"/> is <c>true</c>.
+    /// </summary>
+    public DamageEffectRuleSetConfig PvP { get; set; } = new();
+
+    public static DamageEffectRuleSetConfig CreateDefaultRuleSet() =>
+        new() { Rules = CreateDefaultRules() };
+
+    private static List<DamageEffectRuleConfig> CreateDefaultRules() =>
+    [
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["SlashingAttack"],
+            MinDamage   = 3f,
+            BodyParts   = ["Torso", "LeftArm", "RightArm", "LeftHand", "RightHand"],
+            ChancePct   = 40f,
+            Effects     = [new EffectConfig { Type = "Bleed", Strength = 1.0f, DurationSec = 12f }]
+        },
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["PiercingAttack"],
+            MinDamage   = 4f,
+            BodyParts   = ["Head", "Neck"],
+            ChancePct   = 60f,
+            Effects     =
+            [
+                new EffectConfig { Type = "Bleed", Strength = 1.5f, DurationSec = 8f },
+                new EffectConfig { Type = "Slow",  Strength = 0.4f, DurationSec = 5f }
+            ]
+        },
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["BluntAttack"],
+            MinDamage   = 5f,
+            BodyParts   = ["Head"],
+            ChancePct   = 50f,
+            Effects     =
+            [
+                new EffectConfig { Type = "Knockdown", Strength = 1.0f, DurationSec = 3f },
+                new EffectConfig { Type = "Slow",      Strength = 0.5f, DurationSec = 6f }
+            ]
+        },
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["BluntAttack"],
+            MinDamage   = 2f,
+            BodyParts   = ["LeftLeg", "RightLeg", "LeftFoot", "RightFoot"],
+            ChancePct   = 35f,
+            Effects     = [new EffectConfig { Type = "Slow", Strength = 0.6f, DurationSec = 8f }]
+        },
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["PiercingAttack", "SlashingAttack", "BluntAttack"],
+            MinDamage   = 8f,
+            BodyParts   = [],
+            ChancePct   = 20f,
+            Effects     = [new EffectConfig { Type = "Intoxication", Strength = 0.5f, DurationSec = 10f }]
+        },
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["PiercingAttack"],
+            MinDamage   = 1f,
+            BodyParts   = [],
+            RequireWeaponStackAttributes = [new WeaponAttributeRequirement { Key = "codamageeffects:poisoned", Value = "true" }],
+            ChancePct   = 100f,
+            Effects     = [new EffectConfig { Type = "Poison", Strength = 0.5f, DurationSec = 15f }]
+        },
+        new DamageEffectRuleConfig
+        {
+            DamageTypes  = ["BluntAttack"],
+            MinDamage    = 6f,
+            BodyParts    = [],
+            AttackSource = "Melee",
+            Handedness   = "MainHand",
+            ChancePct    = 50f,
+            Effects      = [new EffectConfig { Type = "Dismount", Strength = 1f, DurationSec = 0f }]
+        },
+        new DamageEffectRuleConfig
+        {
+            DamageTypes  = ["SlashingAttack", "BluntAttack"],
+            MinDamage    = 6f,
+            BodyParts    = [],
+            AttackSource = "Melee",
+            WeaponGrip   = "TwoHandedOnly",
+            ChancePct    = 45f,
+            Effects      =
+            [
+                new EffectConfig { Type = "Knockdown", Strength = 1f, DurationSec = 2f },
+                new EffectConfig { Type = "Slow",      Strength = 0.5f, DurationSec = 5f }
+            ]
+        },
+        new DamageEffectRuleConfig
+        {
+            DamageTypes  = ["PiercingAttack"],
+            MinDamage    = 3f,
+            BodyParts    = ["LeftArm", "RightArm", "LeftLeg", "RightLeg"],
+            AttackSource = "Ranged",
+            ChancePct    = 50f,
+            Effects      = [new EffectConfig { Type = "Bleed", Strength = 0.6f, DurationSec = 8f }]
+        },
+        new DamageEffectRuleConfig
+        {
+            DamageTypes  = ["PiercingAttack"],
+            MinDamage    = 2f,
+            BodyParts    = ["LeftLeg", "RightLeg", "LeftArm", "RightArm"],
+            AttackSource = "Melee",
+            WeaponCodes  = ["game:spear-*"],
+            ChancePct    = 55f,
+            Effects      = [new EffectConfig { Type = "Bleed", Strength = 0.8f, DurationSec = 10f }]
+        }
+    ];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// General config
+// ─────────────────────────────────────────────────────────────────────────────
+
+public class GeneralConfig
+{
+    /// <summary>
+    /// When <c>true</c>, the PvE rule set is evaluated whenever the attacker is not a player.
+    /// Default: <c>true</c>.
+    /// </summary>
+    public bool EnablePvE { get; set; } = true;
+
+    /// <summary>
+    /// When <c>true</c>, the PvP rule set is evaluated whenever the attacker is a player.
+    /// Default: <c>true</c>.
+    /// </summary>
+    public bool EnablePvP { get; set; } = true;
+
+    /// <summary>
+    /// When <c>true</c>, rule-level weapon attribute requirements
+    /// (<c>RequireWeaponStackAttributes</c>, <c>RequireWeaponTypeAttributes</c>)
+    /// are evaluated before a rule fires. When <c>false</c>, all attribute requirements
+    /// are ignored and every rule fires regardless of weapon attributes.
+    /// Default: <c>true</c>.
+    /// </summary>
+    public bool EnableWeaponAttributeGating { get; set; } = true;
+
+    /// <summary>
+    /// When <c>true</c> and the <c>slowtox</c> mod is loaded, the
+    /// <c>Intoxication</c> effect routes through SlowTox's toxin system rather
+    /// than the vanilla intoxication stat, participating in SlowTox's tolerance
+    /// and metabolism system. Set to <c>false</c> to always use vanilla intoxication.
+    /// Default: <c>true</c>.
+    /// </summary>
+    public bool UseSlowToxIfAvailable { get; set; } = true;
+
+    /// <summary>
+    /// When <c>true</c>, using a healing item reduces active effect duration and strength.
+    /// Detection works by injecting a <c>CollectibleBehavior</c> into every item that carries
+    /// <c>BehaviorHealingItem</c> at startup, firing on item-use completion even when mods like
+    /// NoInCombatHealing block the actual HP restore.
+    /// The reduction input is the item's authored <c>health</c> value, multiplied by the
+    /// per-unit reduction rates below.
+    /// Default: <c>true</c>.
+    /// </summary>
+    public bool EnableHealingReduction { get; set; } = true;
+
+    /// <summary>
+    /// Duration removed from each active effect (in seconds) per HP healed by the item.
+    /// Default: <c>2.0</c>.
+    /// </summary>
+    public float HealingDurationReductionPerHp { get; set; } = 2.0f;
+
+    /// <summary>
+    /// Strength removed from each active effect per HP healed by the item.
+    /// Default: <c>0.05</c>.
+    /// </summary>
+    public float HealingStrengthReductionPerHp { get; set; } = 0.05f;
+
+    /// <summary>
+    /// When <c>true</c>, using a healing item reduces active effect duration and strength
+    /// based on how much HP the player <b>actually gains</b>, rather than the item's authored
+    /// <c>health</c> value. Blocked heals (e.g. by NoInCombatHealing) produce 0 actual gain
+    /// and therefore provide no reduction under this mode.
+    /// Both this and <see cref="EnableHealingReduction"/> can be enabled simultaneously for
+    /// combined reduction.
+    /// Default: <c>false</c>.
+    /// </summary>
+    public bool EnableHealingReductionActualGain { get; set; } = false;
+
+    /// <summary>
+    /// Duration removed from each active effect (in seconds) per HP actually gained by healing.
+    /// Default: <c>2.0</c>.
+    /// </summary>
+    public float ActualGainDurationReductionPerHp { get; set; } = 2.0f;
+
+    /// <summary>
+    /// Strength removed from each active effect per HP actually gained by healing.
+    /// Default: <c>0.05</c>.
+    /// </summary>
+    public float ActualGainStrengthReductionPerHp { get; set; } = 0.05f;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Rule set (PvE or PvP block)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// <summary>
+/// A collection of rules and rule groups for one combat context (PvE or PvP).
+/// </summary>
+public class DamageEffectRuleSetConfig
+{
+    /// <summary>
+    /// Individual damage-effect rules evaluated independently.
     /// All matching rules are applied — it is not first-match-wins.
     /// </summary>
     public List<DamageEffectRuleConfig> Rules { get; set; } = [];
 
     /// <summary>
-    /// When <c>true</c>, any <see cref="EffectConfig.RequireWeaponAttribute"/> conditions
-    /// on individual effects are evaluated before the effect is applied.
-    /// When <c>false</c>, all weapon attribute requirements are ignored — effects apply
-    /// regardless of what attributes the attacking weapon carries.
-    /// Default: <c>true</c>.
+    /// Named groups that associate multiple rules with a shared pool of effects.
+    /// <para>
+    /// Within a group, every rule that matches applies its own per-rule
+    /// <see cref="DamageEffectRuleConfig.Effects"/> as usual.
+    /// <see cref="DamageEffectRuleGroupConfig.SharedEffects"/> are applied <em>once</em>
+    /// when <em>at least one</em> rule in the group matches — regardless of how many rules
+    /// matched — preventing double-application of common effects.
+    /// </para>
+    /// <para>
+    /// Use this to express patterns like "all limb hits with any slashing weapon apply
+    /// the same bleed, but body-part-specific rules may add extra effects on top."
+    /// </para>
     /// </summary>
-    public bool EnableWeaponAttributeGating { get; set; } = true;
+    public List<DamageEffectRuleGroupConfig> RuleGroups { get; set; } = [];
+}
 
-    public static DamageEffectsConfig CreateDefault() => new()
+// ─────────────────────────────────────────────────────────────────────────────
+// Rule group
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// <summary>
+/// Associates a set of rules with a common pool of shared effects.
+/// SharedEffects are applied once when any rule in the group matches.
+/// </summary>
+public class DamageEffectRuleGroupConfig
+{
+    /// <summary>Human-readable label. Not used for logic; appears in log output.</summary>
+    public string Name { get; set; } = "";
+
+    /// <summary>Effects applied once when any rule in the group matches.</summary>
+    public List<EffectConfig> SharedEffects { get; set; } = [];
+
+    /// <summary>Rules that belong to this group.</summary>
+    public List<DamageEffectRuleConfig> Rules { get; set; } = [];
+
+    internal void Cache(ICoreServerAPI api)
     {
-        EnableWeaponAttributeGating = true,
-        Rules =
-        [
-            new DamageEffectRuleConfig
-            {
-                DamageTypes = ["SlashingAttack"],
-                MinDamage   = 3f,
-                BodyParts   = ["Torso", "LeftArm", "RightArm", "LeftHand", "RightHand"],
-                ChancePct   = 40f,
-                Effects     = [new EffectConfig { Type = "Bleed", Strength = 1.0f, DurationSec = 12f }]
-            },
-            new DamageEffectRuleConfig
-            {
-                DamageTypes = ["PiercingAttack"],
-                MinDamage   = 4f,
-                BodyParts   = ["Head", "Neck"],
-                ChancePct   = 60f,
-                Effects     =
-                [
-                    new EffectConfig { Type = "Bleed", Strength = 1.5f, DurationSec = 8f },
-                    new EffectConfig { Type = "Slow",  Strength = 0.4f, DurationSec = 5f }
-                ]
-            },
-            new DamageEffectRuleConfig
-            {
-                DamageTypes = ["BluntAttack"],
-                MinDamage   = 5f,
-                BodyParts   = ["Head"],
-                ChancePct   = 50f,
-                Effects     =
-                [
-                    new EffectConfig { Type = "Knockdown", Strength = 1.0f, DurationSec = 3f },
-                    new EffectConfig { Type = "Slow",      Strength = 0.5f, DurationSec = 6f }
-                ]
-            },
-            new DamageEffectRuleConfig
-            {
-                DamageTypes = ["BluntAttack"],
-                MinDamage   = 2f,
-                BodyParts   = ["LeftLeg", "RightLeg", "LeftFoot", "RightFoot"],
-                ChancePct   = 35f,
-                Effects     = [new EffectConfig { Type = "Slow", Strength = 0.6f, DurationSec = 8f }]
-            },
-            new DamageEffectRuleConfig
-            {
-                // Heavy hit — chance of disorientation regardless of weapon or body part
-                DamageTypes = ["PiercingAttack", "SlashingAttack", "BluntAttack"],
-                MinDamage   = 8f,
-                BodyParts   = [],
-                ChancePct   = 20f,
-                Effects     = [new EffectConfig { Type = "Intoxication", Strength = 0.5f, DurationSec = 10f }]
-            },
-            new DamageEffectRuleConfig
-            {
-                // Poison only triggers when weapon carries the codamageeffects:poisoned attribute.
-                // Set the attribute on a weapon itemstack via server command or mod:
-                //   slot.Itemstack.Attributes.SetString("codamageeffects:poisoned", "true")
-                DamageTypes = ["PiercingAttack"],
-                MinDamage   = 1f,
-                BodyParts   = [],
-                ChancePct   = 100f,
-                Effects     =
-                [
-                    new EffectConfig
-                    {
-                        Type       = "Poison",
-                        Strength   = 0.5f,
-                        DurationSec = 15f,
-                        RequireWeaponAttribute = new WeaponAttributeRequirement
-                        {
-                            Key   = "codamageeffects:poisoned",
-                            Value = "true"
-                        }
-                    }
-                ]
-            },
-            new DamageEffectRuleConfig
-            {
-                // Hard blunt hit with main hand has a chance to dismount the target
-                DamageTypes = ["BluntAttack"],
-                MinDamage   = 6f,
-                BodyParts   = [],
-                Handedness  = "MainHand",
-                ChancePct   = 50f,
-                Effects     = [new EffectConfig { Type = "Dismount", Strength = 1f, DurationSec = 0f }]
-            },
-            new DamageEffectRuleConfig
-            {
-                // Example: exclusively two-handed weapons (greatswords, halberds, mauls…)
-                // hitting hard with enough force knocks the target down.
-                DamageTypes  = ["SlashingAttack", "BluntAttack"],
-                MinDamage    = 6f,
-                BodyParts    = [],
-                AttackSource = "Melee",
-                WeaponGrip   = "TwoHandedOnly",
-                ChancePct    = 45f,
-                Effects      =
-                [
-                    new EffectConfig { Type = "Knockdown", Strength = 1f, DurationSec = 2f },
-                    new EffectConfig { Type = "Slow",      Strength = 0.5f, DurationSec = 5f }
-                ]
-            },
-            new DamageEffectRuleConfig
-            {
-                // Example: ranged piercing hits to limbs cause bleeding
-                DamageTypes  = ["PiercingAttack"],
-                MinDamage    = 3f,
-                BodyParts    = ["LeftArm", "RightArm", "LeftLeg", "RightLeg"],
-                AttackSource = "Ranged",
-                ChancePct    = 50f,
-                Effects      = [new EffectConfig { Type = "Bleed", Strength = 0.6f, DurationSec = 8f }]
-            },
-            new DamageEffectRuleConfig
-            {
-                // Example: spears only — bleeding on piercing limb hits (melee)
-                DamageTypes  = ["PiercingAttack"],
-                MinDamage    = 2f,
-                BodyParts    = ["LeftLeg", "RightLeg", "LeftArm", "RightArm"],
-                AttackSource = "Melee",
-                WeaponCodes  = ["game:spear-*"],
-                ChancePct    = 55f,
-                Effects      = [new EffectConfig { Type = "Bleed", Strength = 0.8f, DurationSec = 10f }]
-            }
-        ]
-    };
+        foreach (DamageEffectRuleConfig rule in Rules)
+            rule.Cache(api);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -229,17 +349,6 @@ public class DamageEffectRuleConfig
     /// <summary>
     /// Whether this rule fires on melee hits, ranged (projectile) hits, or both.
     /// Valid values: <c>Any</c> (default) | <c>Melee</c> | <c>Ranged</c>
-    /// <list type="bullet">
-    ///   <item><c>Any</c>    — fires on any damage source (default)</item>
-    ///   <item><c>Melee</c>  — fires only when the attacker struck directly
-    ///         (SourceEntity == CauseEntity)</item>
-    ///   <item><c>Ranged</c> — fires only when a projectile was the damage source
-    ///         (SourceEntity != CauseEntity)</item>
-    /// </list>
-    /// Note: <c>Handedness</c> and <c>WeaponGrip</c> are melee-only concepts and are
-    /// silently ignored when <c>AttackSource</c> is <c>Ranged</c>.
-    /// When <c>AttackSource</c> is <c>Ranged</c>, <c>WeaponCodes</c> matches against
-    /// the launcher (bow, sling…) not the projectile (arrow, stone…).
     /// </summary>
     public string AttackSource { get; set; } = "Any";
 
@@ -254,32 +363,57 @@ public class DamageEffectRuleConfig
     /// <summary>
     /// Which hand the attacking weapon must be held in.
     /// Valid values: <c>MainHand</c> | <c>OffHand</c>
-    /// Null or empty matches either hand, and also passes through when the
-    /// damage source carries no weapon/hand information (e.g. environmental damage).
+    /// Null or empty matches either hand.
     /// </summary>
     public string? Handedness { get; set; } = null;
 
     /// <summary>
     /// Collectible codes (full or single-wildcard glob) the attacking weapon must match.
     /// Examples: <c>"game:sword-iron"</c>, <c>"game:spear-*"</c>, <c>"*:dagger-*"</c>
-    /// Empty list matches any weapon, and also passes through when no weapon is present.
+    /// Empty list matches any weapon.
     /// </summary>
     public List<string> WeaponCodes { get; set; } = [];
 
     /// <summary>
-    /// Filter by the grip capability of the attacking weapon as defined in its
-    /// <c>MeleeWeaponStats</c> JSON (<c>OneHandedStance</c> / <c>TwoHandedStance</c>).
-    /// <list type="bullet">
-    ///   <item><c>TwoHandedOnly</c> — weapon has a <c>TwoHandedStance</c> but no <c>OneHandedStance</c>
-    ///         (greatswords, halberds, mauls, greataxes…)</item>
-    ///   <item><c>OneHandedOnly</c> — weapon has a <c>OneHandedStance</c> but no <c>TwoHandedStance</c>
-    ///         (maces, daggers, short swords…)</item>
-    ///   <item><c>CanBeEither</c>  — weapon defines both stances (longswords, bastard swords…)</item>
-    /// </list>
-    /// Null or omitted matches any weapon, and passes through when no weapon is present
-    /// or when the weapon is not an OverhaulLib <c>MeleeWeapon</c>.
+    /// Key-value attribute conditions checked against the weapon's <b>stack instance</b>
+    /// (<c>ItemStack.Attributes</c>). All listed conditions must pass. Use this for
+    /// per-item tags set at runtime — e.g. via the <c>/codamageeffects tagweapon</c>
+    /// command, a smithing skill, or another mod.
+    /// Gated by <see cref="GeneralConfig.EnableWeaponAttributeGating"/>.
+    /// Empty list matches any weapon.
+    /// </summary>
+    public List<WeaponAttributeRequirement> RequireWeaponStackAttributes { get; set; } = [];
+
+    /// <summary>
+    /// Key-value attribute conditions checked against the weapon's <b>item type definition</b>
+    /// (<c>Collectible.Attributes</c>, i.e. values baked into the item JSON). All listed
+    /// conditions must pass. Use this for properties that apply to every instance of an item
+    /// type, such as a custom weapon category flag.
+    /// Gated by <see cref="GeneralConfig.EnableWeaponAttributeGating"/>.
+    /// Empty list matches any weapon.
+    /// </summary>
+    public List<WeaponAttributeRequirement> RequireWeaponTypeAttributes { get; set; } = [];
+
+    /// <summary>
+    /// Filter by the grip capability of the attacking weapon.
+    /// Valid values: <c>TwoHandedOnly</c> | <c>OneHandedOnly</c> | <c>CanBeEither</c>
+    /// Null or omitted matches any weapon.
     /// </summary>
     public string? WeaponGrip { get; set; } = null;
+
+    /// <summary>
+    /// When set, requires the attacker to be mounted on any mount (<c>true</c>)
+    /// or unmounted (<c>false</c>). <c>null</c> (default) matches regardless of
+    /// attacker mount status.
+    /// </summary>
+    public bool? AttackerMounted { get; set; } = null;
+
+    /// <summary>
+    /// When set, requires the targeted player to be mounted on any mount (<c>true</c>)
+    /// or unmounted (<c>false</c>). <c>null</c> (default) matches regardless of
+    /// target mount status.
+    /// </summary>
+    public bool? TargetMounted { get; set; } = null;
 
     /// <summary>Probability (0–100) this rule fires when all other conditions are met.</summary>
     public float ChancePct { get; set; } = 100f;
@@ -311,7 +445,7 @@ public class DamageEffectRuleConfig
             "mainhand" or "main" => true,
             "offhand"  or "off"  => false,
             null or ""           => null,
-            _ => LogAndReturnNull(api, $"Unknown Handedness value '{Handedness}' — expected MainHand or OffHand. Treating as any.")
+            _ => LogWarn<bool?>(api, $"Unknown Handedness value '{Handedness}' — expected MainHand or OffHand. Treating as any.", null)
         };
 
         ParsedWeaponGrip = WeaponGrip?.ToLowerInvariant() switch
@@ -320,15 +454,15 @@ public class DamageEffectRuleConfig
             "onehandedonly" or "onehanded" or "1h" => WeaponGripRequirement.OneHandedOnly,
             "canbeeither"   or "either"            => WeaponGripRequirement.CanBeEither,
             null or ""                             => null,
-            _ => LogAndReturnNullGrip(api, $"Unknown WeaponGrip value '{WeaponGrip}' — expected TwoHandedOnly, OneHandedOnly, or CanBeEither. Treating as any.")
+            _ => LogWarn<WeaponGripRequirement?>(api, $"Unknown WeaponGrip value '{WeaponGrip}' — expected TwoHandedOnly, OneHandedOnly, or CanBeEither. Treating as any.", null)
         };
 
         ParsedAttackSource = AttackSource?.ToLowerInvariant() switch
         {
-            "melee"          => AttackSourceRequirement.Melee,
-            "ranged"         => AttackSourceRequirement.Ranged,
+            "melee"             => AttackSourceRequirement.Melee,
+            "ranged"            => AttackSourceRequirement.Ranged,
             "any" or null or "" => AttackSourceRequirement.Any,
-            _ => LogAndReturnAny(api, $"Unknown AttackSource value '{AttackSource}' — expected Melee, Ranged, or Any. Treating as Any.")
+            _ => LogWarn(api, $"Unknown AttackSource value '{AttackSource}' — expected Melee, Ranged, or Any. Treating as Any.", AttackSourceRequirement.Any)
         };
     }
 
@@ -337,9 +471,11 @@ public class DamageEffectRuleConfig
     /// Per-effect attribute requirements are checked separately.
     /// </summary>
     internal bool Matches(float damage, EnumDamageType damageType, PlayerBodyPart bodyPart,
-                          ItemStack? weaponStack, bool? isMainHand, bool isRanged)
+                          ItemStack? weaponStack, bool? isMainHand, bool isRanged,
+                          bool attackerMounted, bool targetMounted)
     {
-        if (damage < MinDamage) return false;
+        // Round to 1 decimal place — CO logs display damage as F1, so thresholds are authored in that precision.
+        if ((float)Math.Round(damage, 1) < MinDamage) return false;
         if (ParsedDamageTypes.Count > 0 && !ParsedDamageTypes.Contains(damageType)) return false;
         if (ParsedBodyParts.Count   > 0 && !ParsedBodyParts.Contains(bodyPart))     return false;
 
@@ -363,17 +499,46 @@ public class DamageEffectRuleConfig
         }
 
         // Weapon code: matches the launcher for ranged, the weapon for melee.
-        // Only enforced when the rule specifies codes AND a weapon stack is present.
         if (WeaponCodes.Count > 0 && weaponStack != null)
         {
             string code = weaponStack.Collectible.Code.ToString();
             if (!WeaponCodes.Any(pattern => GlobMatch(pattern, code))) return false;
         }
 
+        // Mount status checks
+        if (AttackerMounted.HasValue && AttackerMounted.Value != attackerMounted) return false;
+        if (TargetMounted.HasValue   && TargetMounted.Value   != targetMounted)   return false;
+
         return true;
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Attribute helpers ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Checks only the weapon's per-stack instance attributes (<c>ItemStack.Attributes</c>).
+    /// Returns true when the key is absent from <paramref name="req"/> (empty key = always pass).
+    /// </summary>
+    internal static bool CheckStackAttribute(ItemStack weaponStack, WeaponAttributeRequirement req)
+    {
+        if (string.IsNullOrEmpty(req.Key)) return true;
+        string? found = weaponStack.Attributes?.GetString(req.Key);
+        if (found == null) return false;
+        if (string.IsNullOrEmpty(req.Value)) return true;
+        return string.Equals(found, req.Value, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Checks only the weapon's item-type attributes (<c>Collectible.Attributes</c>).
+    /// Returns true when the key is absent from <paramref name="req"/> (empty key = always pass).
+    /// </summary>
+    internal static bool CheckTypeAttribute(ItemStack weaponStack, WeaponAttributeRequirement req)
+    {
+        if (string.IsNullOrEmpty(req.Key)) return true;
+        string? found = weaponStack.Collectible?.Attributes?[req.Key]?.AsString();
+        if (found == null) return false;
+        if (string.IsNullOrEmpty(req.Value)) return true;
+        return string.Equals(found, req.Value, StringComparison.OrdinalIgnoreCase);
+    }
 
     private static HashSet<T> ParseEnum<T>(List<string> values, ICoreServerAPI api, string label) where T : struct, Enum
     {
@@ -389,40 +554,24 @@ public class DamageEffectRuleConfig
         return result;
     }
 
-    private static bool? LogAndReturnNull(ICoreServerAPI api, string message)
+    private static T LogWarn<T>(ICoreServerAPI api, string message, T fallback)
     {
         api.Logger.Warning($"[CODamageEffects] {message}");
-        return null;
-    }
-
-    private static WeaponGripRequirement? LogAndReturnNullGrip(ICoreServerAPI api, string message)
-    {
-        api.Logger.Warning($"[CODamageEffects] {message}");
-        return null;
-    }
-
-    private static AttackSourceRequirement LogAndReturnAny(ICoreServerAPI api, string message)
-    {
-        api.Logger.Warning($"[CODamageEffects] {message}");
-        return AttackSourceRequirement.Any;
+        return fallback;
     }
 
     /// <summary>
     /// Reads <c>MeleeWeaponStats</c> directly from the weapon item's attributes JSON and
     /// classifies it as <c>TwoHandedOnly</c>, <c>OneHandedOnly</c>, or <c>CanBeEither</c>.
-    /// Returns null when the weapon is not an OverhaulLib <c>MeleeWeapon</c>, when it
-    /// carries no <c>MeleeWeaponBehavior</c>, or when its attributes cannot be parsed.
+    /// Returns null when the weapon is not an OverhaulLib <c>MeleeWeapon</c>.
     /// </summary>
     internal static WeaponGripRequirement? ResolveWeaponGrip(ItemStack weaponStack)
     {
-        // Confirm this is an OverhaulLib MeleeWeapon by checking for the behavior.
-        // We don't use ServerLogic.Stats directly because Stats is protected.
         MeleeWeaponBehavior? behavior =
             weaponStack.Collectible?.GetCollectibleBehavior<MeleeWeaponBehavior>(withInheritance: true);
 
         if (behavior == null) return null;
 
-        // Parse stats the same way MeleeWeaponServer does in its constructor.
         MeleeWeaponStats? stats;
         try
         {
@@ -443,7 +592,7 @@ public class DamageEffectRuleConfig
             (true,  false) => WeaponGripRequirement.OneHandedOnly,
             (false, true)  => WeaponGripRequirement.TwoHandedOnly,
             (true,  true)  => WeaponGripRequirement.CanBeEither,
-            _              => null   // weapon has no recognised stances — skip grip check
+            _              => null
         };
     }
 
@@ -473,18 +622,9 @@ public class DamageEffectRuleConfig
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// <summary>
-/// Specifies that an effect should only apply when the attacking weapon carries a
-/// specific attribute key (and optionally a specific value).
-///
-/// <para>Attributes are checked on the <em>item type</em> (<c>Collectible.Attributes</c>)
-/// first, then on the <em>item stack instance</em> (<c>ItemStack.Attributes</c>), so both
-/// statically JSON-defined attributes and runtime-set stack attributes are supported.</para>
-///
-/// <para>To poison a weapon at runtime (e.g. via another mod or a server command), set:</para>
-/// <code>slot.Itemstack.Attributes.SetString("codamageeffects:poisoned", "true");</code>
-///
-/// <para>Requires <see cref="DamageEffectsConfig.EnableWeaponAttributeGating"/> to be
-/// <c>true</c> (the default).</para>
+/// A key-value attribute condition on the attacking weapon. Used by
+/// <c>RequireWeaponStackAttribute/s</c> and <c>RequireWeaponTypeAttribute/s</c>.
+/// All checks respect <see cref="GeneralConfig.EnableWeaponAttributeGating"/>.
 /// </summary>
 public class WeaponAttributeRequirement
 {
@@ -506,7 +646,13 @@ public class EffectConfig
 {
     /// <summary>
     /// Effect type. Built-in values:
-    ///   Bleed | Slow | Intoxication | Knockdown | Dismount | Poison | Burning
+    ///   Bleed | Slow | Intoxication | Knockdown | Dismount | Poison | Burning |
+    ///   DamageMultiplier | FlatDamage
+    ///
+    /// DamageMultiplier: multiplies the triggering hit's damage by <c>Strength</c>
+    ///   (e.g. 1.25 = 25% extra damage). Instant — DurationSec is ignored.
+    /// FlatDamage: adds <c>Strength</c> HP to the triggering hit's damage. Instant.
+    /// Both modify the hit damage in-place and are never stored as timed effects.
     /// </summary>
     public string Type { get; set; } = "Bleed";
 
@@ -527,11 +673,4 @@ public class EffectConfig
     /// Ignored by instant effects (Dismount).
     /// </summary>
     public float DurationSec { get; set; } = 5f;
-
-    /// <summary>
-    /// When set, this effect only applies if the attacking weapon carries the specified
-    /// attribute. Evaluated only when
-    /// <see cref="DamageEffectsConfig.EnableWeaponAttributeGating"/> is <c>true</c>.
-    /// </summary>
-    public WeaponAttributeRequirement? RequireWeaponAttribute { get; set; } = null;
 }

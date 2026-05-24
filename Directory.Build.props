@@ -14,8 +14,8 @@
     <ModVersion>1.0.0</ModVersion>
     <ModId>codamageeffects</ModId>
     <Description>Applies configurable status effects (bleed, slow, intoxication, knockdown, dismount, poison, burning) to players on hit.</Description>
-    <Side>server</Side>
-    <RequiredOnClient>false</RequiredOnClient>
+    <Side>universal</Side>
+    <RequiredOnClient>true</RequiredOnClient>
     <RequiredOnServer>true</RequiredOnServer>
   </PropertyGroup>
 
