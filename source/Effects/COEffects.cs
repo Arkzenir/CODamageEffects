@@ -231,128 +231,52 @@ public sealed class SlowEffect : BaseTimedEffect
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Intoxication — daze / disorientation
+// Intoxication — instant toxin injection
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// <summary>
-/// Applies a dazed/disoriented state for the duration.
+/// Instantly adds <c>Strength</c> to the player's intoxication level and expires
+/// immediately. Both vanilla and SlowTox have their own systems that reduce intoxication
+/// over time, so there is nothing to tick, remove, or undo here.
 ///
-/// <para><b>SlowTox compatibility:</b> When SlowTox (modid: <c>slowtox</c>) is loaded
-/// and <see cref="GeneralConfig.UseSlowToxIfAvailable"/> is <c>true</c>, this effect
-/// routes through SlowTox's public WatchedAttribute API:</para>
-/// <list type="bullet">
-///   <item>On apply  → adds <c>Strength</c> to <c>slowtox:newToxins</c></item>
-///   <item>On remove → adds the same amount to <c>slowtox:detoxicants</c> to cancel it</item>
-/// </list>
-/// <para>Otherwise the vanilla <c>intoxication</c> stat is used.</para>
+/// <para><b>SlowTox path:</b> adds <c>Strength</c> to <c>slowtox:newToxins</c> (queued
+/// for SlowTox's digestion pipeline).</para>
+/// <para><b>Vanilla path:</b> adds <c>Strength</c> directly to the <c>intoxication</c>
+/// WatchedAttribute, which vanilla reduces over time on its own.</para>
 /// </summary>
-public sealed class IntoxicationEffect : BaseTimedEffect
+public sealed class IntoxicationEffect : IActiveEffect
 {
-    public override string TypeName => "Intoxication";
-
-    private readonly bool _slowToxPresent;
-
-    // Vanilla path
-    private const string VanillaStat = "intoxication";
-    private const string VanillaKey  = "codamageeffects:intoxication";
-    private bool _vanillaApplied;
-
-    // SlowTox path — track exactly what we injected so we can antidote it
-    private float _injectedToxins;
+    public string TypeName    => "Intoxication";
+    public bool   IsExpired   => true;  // instant — never stored, never ticked
+    public string Description => "Intoxication (instant)";
 
     public IntoxicationEffect(EffectConfig cfg, IServerPlayer player, ICoreServerAPI api, bool useSlowToxIfAvailable)
-        : base(cfg, player, api)
     {
-        _slowToxPresent = useSlowToxIfAvailable && api.ModLoader.IsModEnabled("slowtox");
-        Apply();
+        bool useSlowTox = useSlowToxIfAvailable && api.ModLoader.IsModEnabled("slowtox");
+
+        if (useSlowTox) InjectSlowToxToxins(cfg.Strength, player);
+        else            AddVanillaIntoxication(cfg.Strength, player);
     }
 
-    public override void Remove()
+    public void Tick(float deltaTime)   { }
+    public void Remove()                { }
+    public void Refresh(EffectConfig c) { }
+    public void ReduceFromHealing(float healAmount, float durationReductionPerHp, float strengthReductionPerHp) { }
+
+    private static void InjectSlowToxToxins(float amount, IServerPlayer player)
     {
-        if (_slowToxPresent) RemoveViaSlowTox();
-        else                 RemoveVanillaStat();
+        if (player.Entity == null) return;
+        float current = player.Entity.WatchedAttributes.GetFloat("slowtox:newToxins", 0f);
+        player.Entity.WatchedAttributes.SetFloat("slowtox:newToxins", current + amount);
+        player.Entity.WatchedAttributes.MarkPathDirty("slowtox:newToxins");
     }
 
-    public override void Refresh(EffectConfig cfg)
+    private static void AddVanillaIntoxication(float amount, IServerPlayer player)
     {
-        float previous = _strength;
-        base.Refresh(cfg);
-        if (_strength <= previous + 0.001f) return;
-
-        float delta = _strength - previous;
-        if (_slowToxPresent) InjectSlowToxToxins(delta);
-        else                 { RemoveVanillaStat(); ApplyVanillaStat(); }
-    }
-
-    public override void ReduceFromHealing(float healAmount, float durationReductionPerHp, float strengthReductionPerHp)
-    {
-        float previousStrength = _strength;
-        base.ReduceFromHealing(healAmount, durationReductionPerHp, strengthReductionPerHp);
-        float strengthDelta = previousStrength - _strength;
-
-        if (strengthDelta <= 0.001f) return;
-
-        if (_slowToxPresent)
-        {
-            // Counter a portion of the injected toxins with detoxicants
-            float toAntidote = MathF.Min(strengthDelta, _injectedToxins);
-            if (toAntidote > 0f && Player.Entity != null)
-            {
-                float current = Player.Entity.WatchedAttributes.GetFloat("slowtox:detoxicants", 0f);
-                Player.Entity.WatchedAttributes.SetFloat("slowtox:detoxicants", current + toAntidote);
-                Player.Entity.WatchedAttributes.MarkPathDirty("slowtox:detoxicants");
-                _injectedToxins -= toAntidote;
-            }
-        }
-        else if (!IsExpired && _strength > 0f)
-        {
-            RemoveVanillaStat();
-            ApplyVanillaStat();
-        }
-    }
-
-    // ── Shared ────────────────────────────────────────────────────────────────
-
-    private void Apply()
-    {
-        if (_slowToxPresent) InjectSlowToxToxins(_strength);
-        else                 ApplyVanillaStat();
-    }
-
-    // ── SlowTox path ──────────────────────────────────────────────────────────
-
-    private void InjectSlowToxToxins(float amount)
-    {
-        if (Player.Entity == null) return;
-        float current = Player.Entity.WatchedAttributes.GetFloat("slowtox:newToxins", 0f);
-        Player.Entity.WatchedAttributes.SetFloat("slowtox:newToxins", current + amount);
-        Player.Entity.WatchedAttributes.MarkPathDirty("slowtox:newToxins");
-        _injectedToxins += amount;
-    }
-
-    private void RemoveViaSlowTox()
-    {
-        if (Player.Entity == null || _injectedToxins <= 0f) return;
-        float current = Player.Entity.WatchedAttributes.GetFloat("slowtox:detoxicants", 0f);
-        Player.Entity.WatchedAttributes.SetFloat("slowtox:detoxicants", current + _injectedToxins);
-        Player.Entity.WatchedAttributes.MarkPathDirty("slowtox:detoxicants");
-        _injectedToxins = 0f;
-    }
-
-    // ── Vanilla path ──────────────────────────────────────────────────────────
-
-    private void ApplyVanillaStat()
-    {
-        if (_vanillaApplied) return;
-        Player.Entity?.Stats.Set(VanillaStat, VanillaKey, _strength, persistent: false);
-        _vanillaApplied = true;
-    }
-
-    private void RemoveVanillaStat()
-    {
-        if (!_vanillaApplied) return;
-        Player.Entity?.Stats.Remove(VanillaStat, VanillaKey);
-        _vanillaApplied = false;
+        if (player.Entity == null) return;
+        float current = player.Entity.WatchedAttributes.GetFloat("intoxication", 0f);
+        player.Entity.WatchedAttributes.SetFloat("intoxication", current + amount);
+        player.Entity.WatchedAttributes.MarkPathDirty("intoxication");
     }
 }
 
