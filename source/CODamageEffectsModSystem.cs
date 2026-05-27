@@ -48,6 +48,19 @@ public class DamageEffectsModSystem : ModSystem
         foreach (Block block in api.World.Blocks){ TryInjectTooltipBehavior(block); }
         api.Logger.Notification($"[CODamageEffects] Injected tag tooltip behavior into {tooltipInjected} item type(s).");
 
+        // ── Pre-cache collectible-dependent rule data ────────────────────────────────
+        // Builds two caches that avoid per-hit work:
+        //   _gripCache        — AsObject<MeleeWeaponStats> (JSON deserialise) per weapon type
+        //   ParsedWeaponCodeSet — glob matching per rule that has WeaponCodes filters
+        var allCollectibles = new List<CollectibleObject>(api.World.Items.Count + api.World.Blocks.Count);
+        foreach (Item  item  in api.World.Items)   if (item?.Code  != null) allCollectibles.Add(item);
+        foreach (Block block in api.World.Blocks)  if (block?.Code != null) allCollectibles.Add(block);
+
+        DamageEffectRuleConfig.PreCacheGrip(allCollectibles);
+        Config.PvE.CacheCollectibles(allCollectibles);
+        Config.PvP.CacheCollectibles(allCollectibles);
+        api.Logger.Notification($"[CODamageEffects] Pre-cached rule data for {allCollectibles.Count} collectible type(s).");
+
         // ── Healing tracker — conditional on config ──────────────────────────────────
         if (!Config.General.EnableHealingReduction && !Config.General.EnableHealingReductionActualGain) return;
         if (_effectsSystem == null) return;
@@ -138,18 +151,16 @@ public class DamageEffectsModSystem : ModSystem
             wroteDefaults = true;
         }
 
-        DamageEffectRuleSetConfig defaultRules = DamageEffectsConfig.CreateDefaultRuleSet();
-
         if (pve == null)
         {
-            pve = defaultRules;
+            pve = DamageEffectsConfig.CreateDefaultPvERuleSet();
             api.StoreModConfig(pve, "codamageeffects_pve.json");
             wroteDefaults = true;
         }
 
         if (pvp == null)
         {
-            pvp = DamageEffectsConfig.CreateDefaultRuleSet();
+            pvp = DamageEffectsConfig.CreateDefaultPvPRuleSet();
             api.StoreModConfig(pvp, "codamageeffects_pvp.json");
             wroteDefaults = true;
         }
