@@ -26,11 +26,15 @@ public class DamageEffectsConfig
     /// </summary>
     public DamageEffectRuleSetConfig PvP { get; set; } = new();
 
-    public static DamageEffectRuleSetConfig CreateDefaultRuleSet() =>
-        new() { Rules = CreateDefaultRules() };
+    public static DamageEffectRuleSetConfig CreateDefaultPvERuleSet() =>
+        new() { Rules = CreateDefaultPvERules(), RuleGroups = CreateDefaultPvERuleGroups() };
 
-    private static List<DamageEffectRuleConfig> CreateDefaultRules() =>
+    public static DamageEffectRuleSetConfig CreateDefaultPvPRuleSet() =>
+        new() { Rules = CreateDefaultPvPRules() };
+
+    private static List<DamageEffectRuleConfig> CreateDefaultPvERules() =>
     [
+        // Slashing torso/arms → bleed
         new DamageEffectRuleConfig
         {
             DamageTypes = ["SlashingAttack"],
@@ -39,46 +43,73 @@ public class DamageEffectsConfig
             ChancePct   = 40f,
             Effects     = [new EffectConfig { Type = "Bleed", Strength = 1.0f, DurationSec = 12f }]
         },
+        // Pierce head/neck → bleed + slow
         new DamageEffectRuleConfig
         {
             DamageTypes = ["PiercingAttack"],
             MinDamage   = 4f,
             BodyParts   = ["Head", "Neck"],
-            ChancePct   = 60f,
+            ChancePct   = 65f,
             Effects     =
             [
                 new EffectConfig { Type = "Bleed", Strength = 1.5f, DurationSec = 8f },
                 new EffectConfig { Type = "Slow",  Strength = 0.4f, DurationSec = 5f }
             ]
         },
+        // Blunt head → knockdown + slow
         new DamageEffectRuleConfig
         {
             DamageTypes = ["BluntAttack"],
             MinDamage   = 5f,
             BodyParts   = ["Head"],
-            ChancePct   = 50f,
+            ChancePct   = 55f,
             Effects     =
             [
                 new EffectConfig { Type = "Knockdown", Strength = 1.0f, DurationSec = 3f },
                 new EffectConfig { Type = "Slow",      Strength = 0.5f, DurationSec = 6f }
             ]
         },
+        // Blunt head/face → intoxication (concussion)
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["BluntAttack"],
+            MinDamage   = 3f,
+            BodyParts   = ["Head", "Face"],
+            ChancePct   = 60f,
+            Effects     = [new EffectConfig { Type = "Intoxication", Strength = 0.5f, DurationSec = 10f }]
+        },
+        // Blunt legs → slow + knockdown (trip)
         new DamageEffectRuleConfig
         {
             DamageTypes = ["BluntAttack"],
             MinDamage   = 2f,
             BodyParts   = ["LeftLeg", "RightLeg", "LeftFoot", "RightFoot"],
-            ChancePct   = 35f,
-            Effects     = [new EffectConfig { Type = "Slow", Strength = 0.6f, DurationSec = 8f }]
+            ChancePct   = 50f,
+            Effects     =
+            [
+                new EffectConfig { Type = "Slow",      Strength = 0.6f, DurationSec = 8f },
+                new EffectConfig { Type = "Knockdown", Strength = 1.0f, DurationSec = 2.5f }
+            ]
         },
+        // Pierce/slash legs → slow (cripple)
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["PiercingAttack", "SlashingAttack"],
+            MinDamage   = 2f,
+            BodyParts   = ["LeftLeg", "RightLeg", "LeftFoot", "RightFoot"],
+            ChancePct   = 55f,
+            Effects     = [new EffectConfig { Type = "Slow", Strength = 0.5f, DurationSec = 6f }]
+        },
+        // Large hit → intoxication (stagger)
         new DamageEffectRuleConfig
         {
             DamageTypes = ["PiercingAttack", "SlashingAttack", "BluntAttack"],
-            MinDamage   = 8f,
+            MinDamage   = 6f,
             BodyParts   = [],
-            ChancePct   = 20f,
+            ChancePct   = 25f,
             Effects     = [new EffectConfig { Type = "Intoxication", Strength = 0.5f, DurationSec = 10f }]
         },
+        // Poisoned weapon → poison
         new DamageEffectRuleConfig
         {
             DamageTypes = ["PiercingAttack"],
@@ -88,16 +119,30 @@ public class DamageEffectsConfig
             ChancePct   = 100f,
             Effects     = [new EffectConfig { Type = "Poison", Strength = 0.5f, DurationSec = 15f }]
         },
+        // Heavy main-hand blunt → dismount
         new DamageEffectRuleConfig
         {
             DamageTypes  = ["BluntAttack"],
-            MinDamage    = 6f,
+            MinDamage    = 5f,
             BodyParts    = [],
             AttackSource = "Melee",
             Handedness   = "MainHand",
             ChancePct    = 50f,
             Effects      = [new EffectConfig { Type = "Dismount", Strength = 1f, DurationSec = 0f }]
         },
+        // 2H melee swing vs mounted target → dismount
+        new DamageEffectRuleConfig
+        {
+            DamageTypes    = ["SlashingAttack", "BluntAttack", "PiercingAttack"],
+            MinDamage      = 2f,
+            BodyParts      = [],
+            AttackSource   = "Melee",
+            WeaponGrip     = "TwoHandedOnly",
+            TargetMounted  = true,
+            ChancePct      = 85f,
+            Effects        = [new EffectConfig { Type = "Dismount", Strength = 1f, DurationSec = 0f }]
+        },
+        // 2H melee swing vs unmounted target → knockdown + slow
         new DamageEffectRuleConfig
         {
             DamageTypes  = ["SlashingAttack", "BluntAttack"],
@@ -112,15 +157,66 @@ public class DamageEffectsConfig
                 new EffectConfig { Type = "Slow",      Strength = 0.5f, DurationSec = 5f }
             ]
         },
+        // Mounted attacker melee → bonus damage
         new DamageEffectRuleConfig
         {
-            DamageTypes  = ["PiercingAttack"],
-            MinDamage    = 3f,
-            BodyParts    = ["LeftArm", "RightArm", "LeftLeg", "RightLeg"],
-            AttackSource = "Ranged",
-            ChancePct    = 50f,
-            Effects      = [new EffectConfig { Type = "Bleed", Strength = 0.6f, DurationSec = 8f }]
+            DamageTypes     = [],
+            MinDamage       = 0.5f,
+            BodyParts       = [],
+            AttackSource    = "Melee",
+            AttackerMounted = true,
+            ChancePct       = 100f,
+            Effects         = [new EffectConfig { Type = "DamageMultiplier", Strength = 1.35f, DurationSec = 0f }]
         },
+        // Ranged pierce/slash → arm bleed
+        new DamageEffectRuleConfig
+        {
+            DamageTypes  = ["PiercingAttack", "SlashingAttack"],
+            MinDamage    = 3f,
+            BodyParts    = ["LeftArm", "RightArm"],
+            AttackSource = "Ranged",
+            ChancePct    = 55f,
+            Effects      = [new EffectConfig { Type = "Bleed", Strength = 0.8f, DurationSec = 8f }]
+        },
+        // Ranged pierce/slash → leg slow + bleed (pinned leg)
+        new DamageEffectRuleConfig
+        {
+            DamageTypes  = ["PiercingAttack", "SlashingAttack"],
+            MinDamage    = 2f,
+            BodyParts    = ["LeftLeg", "RightLeg", "LeftFoot", "RightFoot"],
+            AttackSource = "Ranged",
+            ChancePct    = 65f,
+            Effects      =
+            [
+                new EffectConfig { Type = "Slow",  Strength = 0.6f, DurationSec = 8f },
+                new EffectConfig { Type = "Bleed", Strength = 0.5f, DurationSec = 6f }
+            ]
+        },
+        // Ranged pierce/slash → torso bleed
+        new DamageEffectRuleConfig
+        {
+            DamageTypes  = ["PiercingAttack", "SlashingAttack"],
+            MinDamage    = 3f,
+            BodyParts    = ["Torso"],
+            AttackSource = "Ranged",
+            ChancePct    = 55f,
+            Effects      = [new EffectConfig { Type = "Bleed", Strength = 1.0f, DurationSec = 10f }]
+        },
+        // Ranged pierce/slash → head/neck bleed + slow (headshot)
+        new DamageEffectRuleConfig
+        {
+            DamageTypes  = ["PiercingAttack", "SlashingAttack"],
+            MinDamage    = 3f,
+            BodyParts    = ["Head", "Face", "Neck"],
+            AttackSource = "Ranged",
+            ChancePct    = 70f,
+            Effects      =
+            [
+                new EffectConfig { Type = "Bleed", Strength = 1.2f, DurationSec = 10f },
+                new EffectConfig { Type = "Slow",  Strength = 0.5f, DurationSec = 6f }
+            ]
+        },
+        // Spear melee limb hits → bleed
         new DamageEffectRuleConfig
         {
             DamageTypes  = ["PiercingAttack"],
@@ -130,6 +226,249 @@ public class DamageEffectsConfig
             WeaponCodes  = ["game:spear-*"],
             ChancePct    = 55f,
             Effects      = [new EffectConfig { Type = "Bleed", Strength = 0.8f, DurationSec = 10f }]
+        }
+    ];
+
+    private static List<DamageEffectRuleGroupConfig> CreateDefaultPvERuleGroups() =>
+    [
+        new DamageEffectRuleGroupConfig
+        {
+            Name          = "Slashing limb bleeds",
+            SharedEffects = [new EffectConfig { Type = "Bleed", Strength = 0.7f, DurationSec = 9f }],
+            Rules         =
+            [
+                new DamageEffectRuleConfig
+                {
+                    DamageTypes = ["SlashingAttack"],
+                    MinDamage   = 2f,
+                    BodyParts   = ["LeftArm", "RightArm", "LeftHand", "RightHand"],
+                    ChancePct   = 30f,
+                    Effects     = []
+                },
+                new DamageEffectRuleConfig
+                {
+                    DamageTypes = ["SlashingAttack"],
+                    MinDamage   = 2f,
+                    BodyParts   = ["LeftLeg", "RightLeg", "LeftFoot", "RightFoot"],
+                    ChancePct   = 25f,
+                    Effects     = []
+                }
+            ]
+        }
+    ];
+
+    private static List<DamageEffectRuleConfig> CreateDefaultPvPRules() =>
+    [
+        // Slashing torso/arms → light bleed (armored, smaller damage gets through)
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["SlashingAttack"],
+            MinDamage   = 0.8f,
+            BodyParts   = ["Torso", "LeftArm", "RightArm", "LeftHand", "RightHand"],
+            ChancePct   = 35f,
+            Effects     = [new EffectConfig { Type = "Bleed", Strength = 0.5f, DurationSec = 9f }]
+        },
+        // Pierce head/neck → bleed + slow
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["PiercingAttack"],
+            MinDamage   = 1.0f,
+            BodyParts   = ["Head", "Neck"],
+            ChancePct   = 50f,
+            Effects     =
+            [
+                new EffectConfig { Type = "Bleed", Strength = 0.8f, DurationSec = 7f },
+                new EffectConfig { Type = "Slow",  Strength = 0.3f, DurationSec = 4f }
+            ]
+        },
+        // Blunt head → knockdown + slow (requires a real blow through armor)
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["BluntAttack"],
+            MinDamage   = 1.5f,
+            BodyParts   = ["Head"],
+            ChancePct   = 40f,
+            Effects     =
+            [
+                new EffectConfig { Type = "Knockdown", Strength = 1.0f, DurationSec = 2.5f },
+                new EffectConfig { Type = "Slow",      Strength = 0.4f, DurationSec = 5f }
+            ]
+        },
+        // Blunt head/face → intoxication (any concussive hit rattles the head)
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["BluntAttack"],
+            MinDamage   = 0.6f,
+            BodyParts   = ["Head", "Face"],
+            ChancePct   = 50f,
+            Effects     = [new EffectConfig { Type = "Intoxication", Strength = 0.4f, DurationSec = 8f }]
+        },
+        // Blunt legs → slow + knockdown (leg strikes trip regardless of armor)
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["BluntAttack"],
+            MinDamage   = 0.8f,
+            BodyParts   = ["LeftLeg", "RightLeg", "LeftFoot", "RightFoot"],
+            ChancePct   = 45f,
+            Effects     =
+            [
+                new EffectConfig { Type = "Slow",      Strength = 0.5f, DurationSec = 7f },
+                new EffectConfig { Type = "Knockdown", Strength = 1.0f, DurationSec = 2f }
+            ]
+        },
+        // Pierce/slash legs → slow
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["PiercingAttack", "SlashingAttack"],
+            MinDamage   = 0.8f,
+            BodyParts   = ["LeftLeg", "RightLeg", "LeftFoot", "RightFoot"],
+            ChancePct   = 50f,
+            Effects     = [new EffectConfig { Type = "Slow", Strength = 0.4f, DurationSec = 5f }]
+        },
+        // Big hit → intoxication (2.0 is the practical PvP damage ceiling)
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["PiercingAttack", "SlashingAttack", "BluntAttack"],
+            MinDamage   = 2.0f,
+            BodyParts   = [],
+            ChancePct   = 20f,
+            Effects     = [new EffectConfig { Type = "Intoxication", Strength = 0.4f, DurationSec = 8f }]
+        },
+        // Poisoned weapon → poison
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["PiercingAttack"],
+            MinDamage   = 1.0f,
+            BodyParts   = [],
+            RequireWeaponStackAttributes = [new WeaponAttributeRequirement { Key = "codamageeffects:poisoned", Value = "true" }],
+            ChancePct   = 100f,
+            Effects     = [new EffectConfig { Type = "Poison", Strength = 0.5f, DurationSec = 15f }]
+        },
+        // 2H melee swing vs mounted target → dismount
+        new DamageEffectRuleConfig
+        {
+            DamageTypes   = ["SlashingAttack", "BluntAttack", "PiercingAttack"],
+            MinDamage     = 0.8f,
+            BodyParts     = [],
+            AttackSource  = "Melee",
+            WeaponGrip    = "TwoHandedOnly",
+            TargetMounted = true,
+            ChancePct     = 80f,
+            Effects       = [new EffectConfig { Type = "Dismount", Strength = 1f, DurationSec = 0f }]
+        },
+        // 2H melee swing vs unmounted target → knockdown + slow
+        new DamageEffectRuleConfig
+        {
+            DamageTypes  = ["SlashingAttack", "BluntAttack"],
+            MinDamage    = 1.5f,
+            BodyParts    = [],
+            AttackSource = "Melee",
+            WeaponGrip   = "TwoHandedOnly",
+            ChancePct    = 40f,
+            Effects      =
+            [
+                new EffectConfig { Type = "Knockdown", Strength = 1f, DurationSec = 2f },
+                new EffectConfig { Type = "Slow",      Strength = 0.4f, DurationSec = 4f }
+            ]
+        },
+        // Mounted attacker melee → bonus damage
+        new DamageEffectRuleConfig
+        {
+            DamageTypes     = [],
+            MinDamage       = 0.5f,
+            BodyParts       = [],
+            AttackSource    = "Melee",
+            AttackerMounted = true,
+            ChancePct       = 100f,
+            Effects         = [new EffectConfig { Type = "DamageMultiplier", Strength = 1.35f, DurationSec = 0f }]
+        },
+        // Ranged → arm bleed
+        new DamageEffectRuleConfig
+        {
+            DamageTypes  = ["PiercingAttack", "SlashingAttack"],
+            MinDamage    = 1.0f,
+            BodyParts    = ["LeftArm", "RightArm"],
+            AttackSource = "Ranged",
+            ChancePct    = 45f,
+            Effects      = [new EffectConfig { Type = "Bleed", Strength = 0.4f, DurationSec = 7f }]
+        },
+        // Ranged → leg slow + bleed (least armored zone)
+        new DamageEffectRuleConfig
+        {
+            DamageTypes  = ["PiercingAttack", "SlashingAttack"],
+            MinDamage    = 0.8f,
+            BodyParts    = ["LeftLeg", "RightLeg", "LeftFoot", "RightFoot"],
+            AttackSource = "Ranged",
+            ChancePct    = 60f,
+            Effects      =
+            [
+                new EffectConfig { Type = "Slow",  Strength = 0.5f, DurationSec = 7f },
+                new EffectConfig { Type = "Bleed", Strength = 0.3f, DurationSec = 5f }
+            ]
+        },
+        // Ranged → torso bleed
+        new DamageEffectRuleConfig
+        {
+            DamageTypes  = ["PiercingAttack", "SlashingAttack"],
+            MinDamage    = 1.0f,
+            BodyParts    = ["Torso"],
+            AttackSource = "Ranged",
+            ChancePct    = 45f,
+            Effects      = [new EffectConfig { Type = "Bleed", Strength = 0.6f, DurationSec = 8f }]
+        },
+        // Ranged → head/neck bleed + slow
+        new DamageEffectRuleConfig
+        {
+            DamageTypes  = ["PiercingAttack", "SlashingAttack"],
+            MinDamage    = 1.0f,
+            BodyParts    = ["Head", "Face", "Neck"],
+            AttackSource = "Ranged",
+            ChancePct    = 60f,
+            Effects      =
+            [
+                new EffectConfig { Type = "Bleed", Strength = 0.8f, DurationSec = 8f },
+                new EffectConfig { Type = "Slow",  Strength = 0.4f, DurationSec = 5f }
+            ]
+        },
+        // Mounted attacker lance charge → heavy bleed
+        new DamageEffectRuleConfig
+        {
+            DamageTypes     = ["PiercingAttack"],
+            MinDamage       = 2.0f,
+            BodyParts       = [],
+            AttackerMounted = true,
+            ChancePct       = 70f,
+            Effects         = [new EffectConfig { Type = "Bleed", Strength = 1.5f, DurationSec = 12f }]
+        },
+        // Blunt vs mounted target → dismount
+        new DamageEffectRuleConfig
+        {
+            DamageTypes   = ["BluntAttack"],
+            MinDamage     = 1.0f,
+            BodyParts     = [],
+            TargetMounted = true,
+            ChancePct     = 55f,
+            Effects       = [new EffectConfig { Type = "Dismount", Strength = 1f, DurationSec = 0f }]
+        },
+        // Envenomed weapon → poison
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["PiercingAttack", "SlashingAttack"],
+            MinDamage   = 1.0f,
+            BodyParts   = [],
+            RequireWeaponStackAttributes = [new WeaponAttributeRequirement { Key = "codamageeffects:envenomed", Value = "true" }],
+            ChancePct   = 100f,
+            Effects     = [new EffectConfig { Type = "Poison", Strength = 1.0f, DurationSec = 20f }]
+        },
+        // Quality weapon slash → light bleed
+        new DamageEffectRuleConfig
+        {
+            DamageTypes = ["SlashingAttack"],
+            MinDamage   = 0.8f,
+            BodyParts   = [],
+            RequireWeaponStackAttributes = [new WeaponAttributeRequirement { Key = "quality", Value = "" }],
+            ChancePct   = 15f,
+            Effects     = [new EffectConfig { Type = "Bleed", Strength = 0.3f, DurationSec = 5f }]
         }
     ];
 }
@@ -247,6 +586,14 @@ public class DamageEffectRuleSetConfig
     /// </para>
     /// </summary>
     public List<DamageEffectRuleGroupConfig> RuleGroups { get; set; } = [];
+
+    internal void CacheCollectibles(List<CollectibleObject> allCollectibles)
+    {
+        foreach (DamageEffectRuleConfig rule in Rules)
+            rule.CacheCollectibles(allCollectibles);
+        foreach (DamageEffectRuleGroupConfig group in RuleGroups)
+            group.CacheCollectibles(allCollectibles);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -272,6 +619,12 @@ public class DamageEffectRuleGroupConfig
     {
         foreach (DamageEffectRuleConfig rule in Rules)
             rule.Cache(api);
+    }
+
+    internal void CacheCollectibles(List<CollectibleObject> allCollectibles)
+    {
+        foreach (DamageEffectRuleConfig rule in Rules)
+            rule.CacheCollectibles(allCollectibles);
     }
 }
 
@@ -435,6 +788,48 @@ public class DamageEffectRuleConfig
     /// <summary>Parsed attack source requirement. Defaults to Any.</summary>
     internal AttackSourceRequirement ParsedAttackSource { get; private set; } = AttackSourceRequirement.Any;
 
+    /// <summary>
+    /// Pre-built set of collectible codes that match the configured <see cref="WeaponCodes"/> glob patterns.
+    /// Null when <see cref="WeaponCodes"/> is empty (meaning any weapon passes).
+    /// Populated once at AssetsFinalize by <see cref="CacheCollectibles"/>; replaces per-hit glob matching.
+    /// </summary>
+    internal HashSet<string>? ParsedWeaponCodeSet { get; private set; }
+
+    /// <summary>
+    /// Builds <see cref="ParsedWeaponCodeSet"/> by testing every known collectible code against
+    /// <see cref="WeaponCodes"/> patterns. O(collectibles × patterns) once at startup; O(1) per hit after.
+    /// </summary>
+    internal void CacheCollectibles(List<CollectibleObject> allCollectibles)
+    {
+        if (WeaponCodes.Count == 0) return;
+
+        ParsedWeaponCodeSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (CollectibleObject col in allCollectibles)
+        {
+            string code = col.Code.ToString();
+            foreach (string pattern in WeaponCodes)
+            {
+                if (GlobMatch(pattern, code)) { ParsedWeaponCodeSet.Add(code); break; }
+            }
+        }
+    }
+
+    // Per-collectible-type grip classification. Avoids AsObject<MeleeWeaponStats> (JSON deserialise) per hit.
+    private static readonly Dictionary<AssetLocation, WeaponGripRequirement?> _gripCache = new();
+
+    /// <summary>
+    /// Pre-populates the weapon grip cache for all known collectibles.
+    /// Call once at AssetsFinalize, before any damage events can fire.
+    /// </summary>
+    internal static void PreCacheGrip(List<CollectibleObject> allCollectibles)
+    {
+        foreach (CollectibleObject col in allCollectibles)
+        {
+            if (!_gripCache.ContainsKey(col.Code))
+                _gripCache[col.Code] = ComputeWeaponGrip(col);
+        }
+    }
+
     internal void Cache(ICoreServerAPI api)
     {
         ParsedDamageTypes = ParseEnum<EnumDamageType>(DamageTypes, api, "damage type");
@@ -499,10 +894,15 @@ public class DamageEffectRuleConfig
         }
 
         // Weapon code: matches the launcher for ranged, the weapon for melee.
+        // ParsedWeaponCodeSet is pre-built at AssetsFinalize; fall back to per-hit glob only for
+        // dynamically registered collectibles that weren't present at startup.
         if (WeaponCodes.Count > 0 && weaponStack != null)
         {
             string code = weaponStack.Collectible.Code.ToString();
-            if (!WeaponCodes.Any(pattern => GlobMatch(pattern, code))) return false;
+            bool passes = ParsedWeaponCodeSet != null
+                ? ParsedWeaponCodeSet.Contains(code)
+                : WeaponCodes.Any(pattern => GlobMatch(pattern, code));
+            if (!passes) return false;
         }
 
         // Mount status checks
@@ -561,26 +961,35 @@ public class DamageEffectRuleConfig
     }
 
     /// <summary>
-    /// Reads <c>MeleeWeaponStats</c> directly from the weapon item's attributes JSON and
-    /// classifies it as <c>TwoHandedOnly</c>, <c>OneHandedOnly</c>, or <c>CanBeEither</c>.
+    /// Returns the cached grip classification for this weapon type.
+    /// The cache is pre-populated at AssetsFinalize via <see cref="PreCacheGrip"/>, so this is
+    /// typically an O(1) dictionary lookup. Falls back to computing on first access for any
+    /// collectible not present at startup (e.g. dynamically registered items).
     /// Returns null when the weapon is not an OverhaulLib <c>MeleeWeapon</c>.
     /// </summary>
     internal static WeaponGripRequirement? ResolveWeaponGrip(ItemStack weaponStack)
     {
-        MeleeWeaponBehavior? behavior =
-            weaponStack.Collectible?.GetCollectibleBehavior<MeleeWeaponBehavior>(withInheritance: true);
+        CollectibleObject? col = weaponStack.Collectible;
+        if (col == null) return null;
 
-        if (behavior == null) return null;
+        if (_gripCache.TryGetValue(col.Code, out WeaponGripRequirement? cached)) return cached;
+
+        WeaponGripRequirement? result = ComputeWeaponGrip(col);
+        _gripCache[col.Code] = result;
+        return result;
+    }
+
+    /// <summary>
+    /// Deserialises <c>MeleeWeaponStats</c> from the collectible's attributes JSON and
+    /// classifies its grip. Called once per collectible type; result is stored in <see cref="_gripCache"/>.
+    /// </summary>
+    private static WeaponGripRequirement? ComputeWeaponGrip(CollectibleObject col)
+    {
+        if (col.GetCollectibleBehavior<MeleeWeaponBehavior>(withInheritance: true) == null) return null;
 
         MeleeWeaponStats? stats;
-        try
-        {
-            stats = weaponStack.Collectible!.Attributes?.AsObject<MeleeWeaponStats>();
-        }
-        catch
-        {
-            return null;
-        }
+        try { stats = col.Attributes?.AsObject<MeleeWeaponStats>(); }
+        catch { return null; }
 
         if (stats == null) return null;
 
