@@ -55,7 +55,7 @@ public static class EffectFactory
     /// </summary>
     public static IActiveEffect? Create(EffectConfig config, IServerPlayer player, ICoreServerAPI api, GeneralConfig generalConfig)
     {
-        return config.Type.ToLowerInvariant() switch
+        return config.NormalizedType switch
         {
             "bleed"        => new BleedEffect(config, player, api),
             "slow"         => new SlowEffect(config, player, api),
