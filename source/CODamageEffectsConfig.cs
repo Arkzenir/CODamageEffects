@@ -1065,6 +1065,9 @@ public class EffectConfig
     /// </summary>
     public string Type { get; set; } = "Bleed";
 
+    private string? _normalizedType;
+    internal string NormalizedType => _normalizedType ??= Type.ToLowerInvariant();
+
     /// <summary>
     /// Intensity. Exact meaning depends on the effect type:
     ///   Bleed        — HP lost per second

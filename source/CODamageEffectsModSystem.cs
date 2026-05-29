@@ -61,8 +61,9 @@ public class DamageEffectsModSystem : ModSystem
         Config.PvP.CacheCollectibles(allCollectibles);
         api.Logger.Notification($"[CODamageEffects] Pre-cached rule data for {allCollectibles.Count} collectible type(s).");
 
-        // ── Healing tracker — conditional on config ──────────────────────────────────
-        if (!Config.General.EnableHealingReduction && !Config.General.EnableHealingReductionActualGain) return;
+        // ── Healing tracker — only needed for the authored-value reduction mode ────────
+        // The actual-gain mode subscribes to EntityBehaviorHealth.onDamaged per player (see OnPlayerNowPlaying).
+        if (!Config.General.EnableHealingReduction) return;
         if (_effectsSystem == null) return;
 
         int scanned  = 0;
@@ -196,6 +197,7 @@ public class DamageEffectsModSystem : ModSystem
         }
 
         behavior.OnReceiveDamage += _effectsSystem!.CreateDamageHandler(player);
+        _effectsSystem!.SubscribePlayerHealEvents(player);
     }
 
     private void OnPlayerLeave(IServerPlayer player) => _effectsSystem?.RemovePlayer(player);

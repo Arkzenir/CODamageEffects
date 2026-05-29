@@ -3,6 +3,7 @@ using CODamageEffects.Effects;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Server;
+using Vintagestory.GameContent;
 
 namespace CODamageEffects.Systems;
 
@@ -18,6 +19,7 @@ public sealed class DamageEffectsSystem : IDisposable
     private readonly Dictionary<string, PlayerEffectState> _states = new();
     // Reused each tick to avoid per-tick allocation. Tick callbacks may mutate _states (ReceiveDamage re-entrant path).
     private readonly List<(string Uid, PlayerEffectState State)> _tickSnapshot = new();
+    private readonly Dictionary<string, (EntityBehaviorHealth Health, OnDamagedDelegate Handler)> _healSubscriptions = new();
     private long _tickListenerId;
 
     public DamageEffectsSystem(ICoreServerAPI api, DamageEffectsConfig config)
@@ -35,23 +37,16 @@ public sealed class DamageEffectsSystem : IDisposable
 
     /// <summary>
     /// Called by <see cref="HealingTrackBehavior"/> when a player (or target entity) finishes
-    /// using a healing item. Can apply up to two independent reduction passes:
-    /// <list type="bullet">
-    ///   <item><b>Authored value</b> (<see cref="GeneralConfig.EnableHealingReduction"/>):
-    ///   uses the item's authored <c>health</c> value — fires even when mods like
-    ///   NoInCombatHealing block the actual HP restore.</item>
-    ///   <item><b>Actual gain</b> (<see cref="GeneralConfig.EnableHealingReductionActualGain"/>):
-    ///   uses the HP the target entity actually gained — produces 0 reduction when the heal
-    ///   was blocked or the player was already at full health.</item>
-    /// </list>
-    /// Both modes can be active simultaneously. No-op when the target is not a tracked player.
+    /// using a healing item. Applies the <em>authored-value</em> reduction mode
+    /// (<see cref="GeneralConfig.EnableHealingReduction"/>): uses the item's authored
+    /// <c>health</c> value and fires even when NoInCombatHealing blocks the actual HP restore.
+    /// No-op when the target is not a tracked player.
+    /// The <em>actual-gain</em> mode (<see cref="GeneralConfig.EnableHealingReductionActualGain"/>)
+    /// is handled separately via <see cref="SubscribePlayerHealEvents"/>.
     /// </summary>
-    public void OnHealingItemUsed(Entity targetEntity, float healScore, float actualHpGained)
+    public void OnHealingItemUsed(Entity targetEntity, float healScore)
     {
-        bool doAuthoredReduction = _config.General.EnableHealingReduction && healScore > 0f;
-        bool doActualReduction   = _config.General.EnableHealingReductionActualGain && actualHpGained > 0f;
-
-        if (!doAuthoredReduction && !doActualReduction) return;
+        if (!_config.General.EnableHealingReduction || healScore <= 0f) return;
 
         IServerPlayer? player = (targetEntity as EntityPlayer)?.Player as IServerPlayer;
         if (player == null) return;
@@ -59,25 +54,56 @@ public sealed class DamageEffectsSystem : IDisposable
         if (!_states.TryGetValue(player.PlayerUID, out PlayerEffectState? state)) return;
         if (!state.HasActiveEffects) return;
 
-        if (doAuthoredReduction)
-        {
-            float durationReduction = healScore * _config.General.HealingDurationReductionPerHp;
-            float strengthReduction = healScore * _config.General.HealingStrengthReductionPerHp;
-            _api.Logger.Notification(
-                $"[CODamageEffects] {player.PlayerName}: Healing reduction (authored score={healScore:F1}) — " +
-                $"-{durationReduction:F1}s duration / -{strengthReduction:F3} strength");
-            state.ReduceFromHealing(healScore, _config.General.HealingDurationReductionPerHp, _config.General.HealingStrengthReductionPerHp);
-        }
+        float durationReduction = healScore * _config.General.HealingDurationReductionPerHp;
+        float strengthReduction = healScore * _config.General.HealingStrengthReductionPerHp;
+        _api.Logger.Notification(
+            $"[CODamageEffects] {player.PlayerName}: Healing reduction (authored score={healScore:F1}) — " +
+            $"-{durationReduction:F1}s duration / -{strengthReduction:F3} strength");
+        state.ReduceFromHealing(healScore, _config.General.HealingDurationReductionPerHp, _config.General.HealingStrengthReductionPerHp);
+    }
 
-        if (doActualReduction)
+    /// <summary>
+    /// Subscribes to <c>EntityBehaviorHealth.onDamaged</c> for the given player, driving the
+    /// <em>actual-gain</em> healing reduction mode (<see cref="GeneralConfig.EnableHealingReductionActualGain"/>).
+    /// The event fires once per DoT healing tick with the tick's damage value (which NoInCombatHealing
+    /// has already reduced to 0 when in-combat blocking is active), so the handler naturally
+    /// sees 0 when the heal is blocked and skips reduction. No-op when the mode is disabled.
+    /// </summary>
+    public void SubscribePlayerHealEvents(IServerPlayer player)
+    {
+        if (!_config.General.EnableHealingReductionActualGain) return;
+
+        EntityBehaviorHealth? healthBehavior = player.Entity?.GetBehavior<EntityBehaviorHealth>();
+        if (healthBehavior == null) return;
+
+        string uid        = player.PlayerUID;
+        string playerName = player.PlayerName;
+
+        OnDamagedDelegate handler = (float damage, DamageSource source) =>
         {
-            float durationReduction = actualHpGained * _config.General.ActualGainDurationReductionPerHp;
-            float strengthReduction = actualHpGained * _config.General.ActualGainStrengthReductionPerHp;
-            _api.Logger.Notification(
-                $"[CODamageEffects] {player.PlayerName}: Healing reduction (actual gain={actualHpGained:F1}) — " +
-                $"-{durationReduction:F1}s duration / -{strengthReduction:F3} strength");
-            state.ReduceFromHealing(actualHpGained, _config.General.ActualGainDurationReductionPerHp, _config.General.ActualGainStrengthReductionPerHp);
-        }
+            if (source.Type   == EnumDamageType.Heal &&
+                source.Source == EnumDamageSource.Internal &&
+                damage > 0f &&
+                _states.TryGetValue(uid, out PlayerEffectState? state) &&
+                state.HasActiveEffects)
+            {
+                // Cap at missing HP — can't gain more than the deficit.
+                float actualGain = MathF.Min(damage, healthBehavior.MaxHealth - healthBehavior.Health);
+                if (actualGain > 0f)
+                {
+                    float dur = actualGain * _config.General.ActualGainDurationReductionPerHp;
+                    float str = actualGain * _config.General.ActualGainStrengthReductionPerHp;
+                    _api.Logger.Notification(
+                        $"[CODamageEffects] {playerName}: Healing reduction (actual tick gain={actualGain:F2}) — " +
+                        $"-{dur:F1}s duration / -{str:F3} strength");
+                    state.ReduceFromHealing(actualGain, _config.General.ActualGainDurationReductionPerHp, _config.General.ActualGainStrengthReductionPerHp);
+                }
+            }
+            return damage;
+        };
+
+        healthBehavior.onDamaged += handler;
+        _healSubscriptions[uid] = (healthBehavior, handler);
     }
 
     /// <summary>
@@ -130,16 +156,29 @@ public sealed class DamageEffectsSystem : IDisposable
     /// <summary>Remove a player's active effects and clean up state on disconnect.</summary>
     public void RemovePlayer(IServerPlayer player)
     {
-        if (_states.TryGetValue(player.PlayerUID, out PlayerEffectState? state))
+        string uid = player.PlayerUID;
+
+        if (_healSubscriptions.TryGetValue(uid, out var sub))
+        {
+            sub.Health.onDamaged -= sub.Handler;
+            _healSubscriptions.Remove(uid);
+        }
+
+        if (_states.TryGetValue(uid, out PlayerEffectState? state))
         {
             state.RemoveAll();
-            _states.Remove(player.PlayerUID);
+            _states.Remove(uid);
         }
     }
 
     public void Dispose()
     {
         _api.Event.UnregisterGameTickListener(_tickListenerId);
+
+        foreach (var sub in _healSubscriptions.Values)
+            sub.Health.onDamaged -= sub.Handler;
+        _healSubscriptions.Clear();
+
         foreach (PlayerEffectState state in _states.Values)
             state.RemoveAll();
         _states.Clear();
@@ -250,7 +289,7 @@ public sealed class DamageEffectsSystem : IDisposable
     /// </summary>
     private bool TryApplyAsDamageModifier(EffectConfig cfg, ref float damage, IServerPlayer player)
     {
-        switch (cfg.Type.ToLowerInvariant())
+        switch (cfg.NormalizedType)
         {
             case "damagemultiplier":
             {
@@ -290,15 +329,11 @@ public sealed class DamageEffectsSystem : IDisposable
         ItemStack? rightStack = agent.RightHandItemSlot?.Itemstack;
         ItemStack? leftStack  = agent.LeftHandItemSlot?.Itemstack;
 
+        // ItemStack.Id uniquely identifies the item type — no need for a redundant Code comparison.
         if (weaponStack.Id != 0)
         {
-            if (rightStack != null && rightStack.Id == weaponStack.Id &&
-                rightStack.Collectible?.Code?.Equals(weaponStack.Collectible?.Code) == true)
-                return true;
-
-            if (leftStack != null && leftStack.Id == weaponStack.Id &&
-                leftStack.Collectible?.Code?.Equals(weaponStack.Collectible?.Code) == true)
-                return false;
+            if (rightStack?.Id == weaponStack.Id) return true;
+            if (leftStack?.Id  == weaponStack.Id) return false;
         }
 
         if (rightStack?.Collectible?.Code?.Equals(weaponStack.Collectible?.Code) == true)
@@ -383,7 +418,7 @@ internal sealed class PlayerEffectState
 
     internal void Apply(EffectConfig cfg, IServerPlayer player, ICoreServerAPI api, GeneralConfig generalConfig)
     {
-        string key = cfg.Type.ToLowerInvariant();
+        string key = cfg.NormalizedType;
 
         if (_active.TryGetValue(key, out IActiveEffect? existing))
         {
