@@ -103,10 +103,11 @@ public class DamageEffectsModSystem : ModSystem
         if (col == null) return false;
         if (col.GetCollectibleBehavior<HealingTrackBehavior>(withInheritance: false) != null) return false;
 
-        float health = ResolveHealingHealth(col);
-        if (health <= 0f) return false;
+        CollectibleBehaviorHealingItem? healBehavior =
+            col.GetCollectibleBehavior<CollectibleBehaviorHealingItem>(withInheritance: true);
+        if (healBehavior == null || healBehavior.Health <= 0f) return false;
 
-        HealingTrackBehavior tracker = new(col, health, _effectsSystem!.OnHealingItemUsed);
+        HealingTrackBehavior tracker = new(col, _effectsSystem!.OnHealingItemUsed);
         CollectibleBehavior[] old     = col.CollectibleBehaviors;
         CollectibleBehavior[] updated = new CollectibleBehavior[old.Length + 1];
         Array.Copy(old, updated, old.Length);
@@ -127,12 +128,6 @@ public class DamageEffectsModSystem : ModSystem
         updated[old.Length] = behavior;
         col.CollectibleBehaviors = updated;
         return true;
-    }
-
-    private static float ResolveHealingHealth(CollectibleObject col)
-    {
-        CollectibleBehaviorHealingItem? behavior = col.GetCollectibleBehavior<CollectibleBehaviorHealingItem>(withInheritance: true);
-        return behavior != null && behavior.Health > 0f ? behavior.Health : 0f;
     }
 
     // ── Config ─────────────────────────────────────────────────────────────────
