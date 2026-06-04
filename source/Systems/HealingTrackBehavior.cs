@@ -74,12 +74,12 @@ public sealed class HealingTrackBehavior : CollectibleBehavior
         int sizeAfter = slot.Itemstack?.StackSize ?? 0;
         if (sizeAfter >= sizeBefore) return;
 
-        CollectibleBehaviorHealingItem? healBehavior =
-            collObj.GetCollectibleBehavior<CollectibleBehaviorHealingItem>(withInheritance: true);
-        if (healBehavior == null || healBehavior.Health <= 0f) return;
+        BehaviorHealingItem? healBehavior =
+            collObj.GetCollectibleBehavior<BehaviorHealingItem>(withInheritance: true);
+        if (healBehavior == null || healBehavior.Config.Health <= 0f) return;
 
         Entity target = ResolveTarget(byEntity, entitySel, slot);
-        _onItemUsed(target, healBehavior.Health);
+        _onItemUsed(target, healBehavior.Config.Health);
     }
 
     public override bool OnHeldInteractCancel(

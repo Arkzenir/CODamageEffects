@@ -103,9 +103,9 @@ public class DamageEffectsModSystem : ModSystem
         if (col == null) return false;
         if (col.GetCollectibleBehavior<HealingTrackBehavior>(withInheritance: false) != null) return false;
 
-        CollectibleBehaviorHealingItem? healBehavior =
-            col.GetCollectibleBehavior<CollectibleBehaviorHealingItem>(withInheritance: true);
-        if (healBehavior == null || healBehavior.Health <= 0f) return false;
+        BehaviorHealingItem? healBehavior =
+            col.GetCollectibleBehavior<BehaviorHealingItem>(withInheritance: true);
+        if (healBehavior == null || healBehavior.Config.Health <= 0f) return false;
 
         HealingTrackBehavior tracker = new(col, _effectsSystem!.OnHealingItemUsed);
         CollectibleBehavior[] old     = col.CollectibleBehaviors;
