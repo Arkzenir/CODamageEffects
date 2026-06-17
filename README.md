@@ -1,6 +1,6 @@
 # CO Damage Effects
 
-A server-side Vintage Story mod that applies configurable **status effects** to players based on the damage they receive. Requires **Overhaul Library** (`overhaullib`).
+A server-side Vintage Story mod that applies configurable **status effects** to players based on the damage they receive. Requires the **Overhaul Library** family: `overhaullib` on VS 1.21.x, and `overhaulliblegacycompat` (Overhaul Library — Legacy Compat) on VS 1.22.x.
 
 ---
 
@@ -8,7 +8,8 @@ A server-side Vintage Story mod that applies configurable **status effects** to 
 
 | Mod | Required | Notes |
 |---|---|---|
-| [Overhaul Library](https://mods.vintagestory.at/overhaullib) (`overhaullib`) | **Yes** | Provides `PlayerDamageModelBehavior` and `OnReceiveDamage`. VS 1.21.x → v1.20.x+, VS 1.22.x → v2.0.3+ |
+| [Overhaul Library](https://mods.vintagestory.at/overhaullib) (`overhaullib`) | **Yes (VS 1.21.x)** | Provides `PlayerDamageModelBehavior` and `OnReceiveDamage`. VS 1.21.x → v1.20.x+ |
+| Overhaul Library — Legacy Compat (`overhaulliblegacycompat`) | **Yes (VS 1.22.x)** | In VS 1.22 the `CombatOverhaul.*` API the mod consumes was split out of `overhaullib` 2.x into this legacy-compat assembly (`OverhaullibLegacyCompat.dll`). Provides the same `PlayerDamageModelBehavior`, `OnReceiveDamage`, `IWeaponDamageSource`, `PlayerBodyPart`, and `MeleeWeapon*` types under the unchanged `CombatOverhaul.*` namespaces. |
 | [SlowTox](https://mods.vintagestory.at/slowtox) (`slowtox`) | No | Auto-detected; `Intoxication` integrates with it when present |
 
 This mod is **universal** — it must be installed on both client and server.

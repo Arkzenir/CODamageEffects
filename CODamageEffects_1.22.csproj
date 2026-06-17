@@ -4,7 +4,9 @@
     CODamageEffects — Vintage Story 1.22.x build
     ─────────────────────────────────────────────
     .NET target  : net10.0  (VS 1.22 ships with .NET 10)
-    overhaullib  : >= 2.0.3
+    dependency   : overhaulliblegacycompat  (Overhaul Library — Legacy Compat)
+                   In VS 1.22 the CombatOverhaul.* API moved out of overhaullib 2.x
+                   into this legacy-compat assembly (OverhaullibLegacyCompat.dll).
 
     All shared logic (output paths, references, modinfo, zip) lives in
     Common.Build.targets.  Only version-specific declarations belong here.
