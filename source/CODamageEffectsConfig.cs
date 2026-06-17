@@ -100,73 +100,14 @@ public class DamageEffectsConfig
             ChancePct   = 55f,
             Effects     = [new EffectConfig { Type = "Slow", Strength = 0.5f, DurationSec = 6f }]
         },
-        // Large hit → intoxication (stagger)
+        // Heavy blunt head/face → strong intoxication (severe concussion)
         new DamageEffectRuleConfig
         {
-            DamageTypes = ["PiercingAttack", "SlashingAttack", "BluntAttack"],
+            DamageTypes = ["BluntAttack"],
             MinDamage   = 6f,
-            BodyParts   = [],
-            ChancePct   = 25f,
+            BodyParts   = ["Head", "Face"],
+            ChancePct   = 75f,
             Effects     = [new EffectConfig { Type = "Intoxication", Strength = 0.5f, DurationSec = 10f }]
-        },
-        // Poisoned weapon → poison
-        new DamageEffectRuleConfig
-        {
-            DamageTypes = ["PiercingAttack"],
-            MinDamage   = 1f,
-            BodyParts   = [],
-            RequireWeaponStackAttributes = [new WeaponAttributeRequirement { Key = "codamageeffects:poisoned", Value = "true" }],
-            ChancePct   = 100f,
-            Effects     = [new EffectConfig { Type = "Poison", Strength = 0.5f, DurationSec = 15f }]
-        },
-        // Heavy main-hand blunt → dismount
-        new DamageEffectRuleConfig
-        {
-            DamageTypes  = ["BluntAttack"],
-            MinDamage    = 5f,
-            BodyParts    = [],
-            AttackSource = "Melee",
-            Handedness   = "MainHand",
-            ChancePct    = 50f,
-            Effects      = [new EffectConfig { Type = "Dismount", Strength = 1f, DurationSec = 0f }]
-        },
-        // 2H melee swing vs mounted target → dismount
-        new DamageEffectRuleConfig
-        {
-            DamageTypes    = ["SlashingAttack", "BluntAttack", "PiercingAttack"],
-            MinDamage      = 2f,
-            BodyParts      = [],
-            AttackSource   = "Melee",
-            WeaponGrip     = "TwoHandedOnly",
-            TargetMounted  = true,
-            ChancePct      = 85f,
-            Effects        = [new EffectConfig { Type = "Dismount", Strength = 1f, DurationSec = 0f }]
-        },
-        // 2H melee swing vs unmounted target → knockdown + slow
-        new DamageEffectRuleConfig
-        {
-            DamageTypes  = ["SlashingAttack", "BluntAttack"],
-            MinDamage    = 6f,
-            BodyParts    = [],
-            AttackSource = "Melee",
-            WeaponGrip   = "TwoHandedOnly",
-            ChancePct    = 45f,
-            Effects      =
-            [
-                new EffectConfig { Type = "Knockdown", Strength = 1f, DurationSec = 2f },
-                new EffectConfig { Type = "Slow",      Strength = 0.5f, DurationSec = 5f }
-            ]
-        },
-        // Mounted attacker melee → bonus damage
-        new DamageEffectRuleConfig
-        {
-            DamageTypes     = [],
-            MinDamage       = 0.5f,
-            BodyParts       = [],
-            AttackSource    = "Melee",
-            AttackerMounted = true,
-            ChancePct       = 100f,
-            Effects         = [new EffectConfig { Type = "DamageMultiplier", Strength = 1.35f, DurationSec = 0f }]
         },
         // Ranged pierce/slash → arm bleed
         new DamageEffectRuleConfig
@@ -259,11 +200,11 @@ public class DamageEffectsConfig
 
     private static List<DamageEffectRuleConfig> CreateDefaultPvPRules() =>
     [
-        // Slashing torso/arms → light bleed (armored, smaller damage gets through)
+        // Slashing torso/arms → light bleed
         new DamageEffectRuleConfig
         {
             DamageTypes = ["SlashingAttack"],
-            MinDamage   = 0.8f,
+            MinDamage   = 2.0f,
             BodyParts   = ["Torso", "LeftArm", "RightArm", "LeftHand", "RightHand"],
             ChancePct   = 35f,
             Effects     = [new EffectConfig { Type = "Bleed", Strength = 0.5f, DurationSec = 9f }]
@@ -281,12 +222,12 @@ public class DamageEffectsConfig
                 new EffectConfig { Type = "Slow",  Strength = 0.3f, DurationSec = 4f }
             ]
         },
-        // Blunt head → knockdown + slow (requires a real blow through armor)
+        // Blunt head/face → knockdown + slow (requires a real blow through armor)
         new DamageEffectRuleConfig
         {
             DamageTypes = ["BluntAttack"],
             MinDamage   = 1.5f,
-            BodyParts   = ["Head"],
+            BodyParts   = ["Head", "Face"],
             ChancePct   = 40f,
             Effects     =
             [
@@ -316,28 +257,19 @@ public class DamageEffectsConfig
                 new EffectConfig { Type = "Knockdown", Strength = 1.0f, DurationSec = 2f }
             ]
         },
-        // Pierce/slash legs → slow
+        // Any weapon legs → slow
         new DamageEffectRuleConfig
         {
-            DamageTypes = ["PiercingAttack", "SlashingAttack"],
+            DamageTypes = ["SlashingAttack", "BluntAttack", "PiercingAttack"],
             MinDamage   = 0.8f,
             BodyParts   = ["LeftLeg", "RightLeg", "LeftFoot", "RightFoot"],
             ChancePct   = 50f,
             Effects     = [new EffectConfig { Type = "Slow", Strength = 0.4f, DurationSec = 5f }]
         },
-        // Big hit → intoxication (2.0 is the practical PvP damage ceiling)
-        new DamageEffectRuleConfig
-        {
-            DamageTypes = ["PiercingAttack", "SlashingAttack", "BluntAttack"],
-            MinDamage   = 2.0f,
-            BodyParts   = [],
-            ChancePct   = 20f,
-            Effects     = [new EffectConfig { Type = "Intoxication", Strength = 0.4f, DurationSec = 8f }]
-        },
         // Poisoned weapon → poison
         new DamageEffectRuleConfig
         {
-            DamageTypes = ["PiercingAttack"],
+            DamageTypes = ["PiercingAttack", "SlashingAttack"],
             MinDamage   = 1.0f,
             BodyParts   = [],
             RequireWeaponStackAttributes = [new WeaponAttributeRequirement { Key = "codamageeffects:poisoned", Value = "true" }],
@@ -348,39 +280,24 @@ public class DamageEffectsConfig
         new DamageEffectRuleConfig
         {
             DamageTypes   = ["SlashingAttack", "BluntAttack", "PiercingAttack"],
-            MinDamage     = 0.8f,
+            MinDamage     = 1.2f,
             BodyParts     = [],
             AttackSource  = "Melee",
             WeaponGrip    = "TwoHandedOnly",
             TargetMounted = true,
-            ChancePct     = 80f,
+            ChancePct     = 100f,
             Effects       = [new EffectConfig { Type = "Dismount", Strength = 1f, DurationSec = 0f }]
-        },
-        // 2H melee swing vs unmounted target → knockdown + slow
-        new DamageEffectRuleConfig
-        {
-            DamageTypes  = ["SlashingAttack", "BluntAttack"],
-            MinDamage    = 1.5f,
-            BodyParts    = [],
-            AttackSource = "Melee",
-            WeaponGrip   = "TwoHandedOnly",
-            ChancePct    = 40f,
-            Effects      =
-            [
-                new EffectConfig { Type = "Knockdown", Strength = 1f, DurationSec = 2f },
-                new EffectConfig { Type = "Slow",      Strength = 0.4f, DurationSec = 4f }
-            ]
         },
         // Mounted attacker melee → bonus damage
         new DamageEffectRuleConfig
         {
             DamageTypes     = [],
-            MinDamage       = 0.5f,
+            MinDamage       = 0.1f,
             BodyParts       = [],
             AttackSource    = "Melee",
             AttackerMounted = true,
             ChancePct       = 100f,
-            Effects         = [new EffectConfig { Type = "DamageMultiplier", Strength = 1.35f, DurationSec = 0f }]
+            Effects         = [new EffectConfig { Type = "DamageMultiplier", Strength = 1.5f, DurationSec = 0f }]
         },
         // Ranged → arm bleed
         new DamageEffectRuleConfig
@@ -430,25 +347,15 @@ public class DamageEffectsConfig
                 new EffectConfig { Type = "Slow",  Strength = 0.4f, DurationSec = 5f }
             ]
         },
-        // Mounted attacker lance charge → heavy bleed
+        // Mounted attacker lance charge → bleed
         new DamageEffectRuleConfig
         {
             DamageTypes     = ["PiercingAttack"],
-            MinDamage       = 2.0f,
+            MinDamage       = 1.6f,
             BodyParts       = [],
             AttackerMounted = true,
-            ChancePct       = 70f,
-            Effects         = [new EffectConfig { Type = "Bleed", Strength = 1.5f, DurationSec = 12f }]
-        },
-        // Blunt vs mounted target → dismount
-        new DamageEffectRuleConfig
-        {
-            DamageTypes   = ["BluntAttack"],
-            MinDamage     = 1.0f,
-            BodyParts     = [],
-            TargetMounted = true,
-            ChancePct     = 55f,
-            Effects       = [new EffectConfig { Type = "Dismount", Strength = 1f, DurationSec = 0f }]
+            ChancePct       = 50f,
+            Effects         = [new EffectConfig { Type = "Bleed", Strength = 1.0f, DurationSec = 12f }]
         },
         // Envenomed weapon → poison
         new DamageEffectRuleConfig
@@ -459,16 +366,6 @@ public class DamageEffectsConfig
             RequireWeaponStackAttributes = [new WeaponAttributeRequirement { Key = "codamageeffects:envenomed", Value = "true" }],
             ChancePct   = 100f,
             Effects     = [new EffectConfig { Type = "Poison", Strength = 1.0f, DurationSec = 20f }]
-        },
-        // Quality weapon slash → light bleed
-        new DamageEffectRuleConfig
-        {
-            DamageTypes = ["SlashingAttack"],
-            MinDamage   = 0.8f,
-            BodyParts   = [],
-            RequireWeaponStackAttributes = [new WeaponAttributeRequirement { Key = "quality", Value = "" }],
-            ChancePct   = 15f,
-            Effects     = [new EffectConfig { Type = "Bleed", Strength = 0.3f, DurationSec = 5f }]
         }
     ];
 }

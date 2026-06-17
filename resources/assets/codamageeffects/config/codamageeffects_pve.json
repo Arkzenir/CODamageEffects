@@ -58,70 +58,12 @@
       ]
     },
     {
-      "DamageTypes": [ "PiercingAttack", "SlashingAttack", "BluntAttack" ],
+      "DamageTypes": [ "BluntAttack" ],
       "MinDamage": 6.0,
-      "BodyParts": [],
-      "ChancePct": 25.0,
+      "BodyParts": ["Head", "Face"],
+      "ChancePct": 75.0,
       "Effects": [
         { "Type": "Intoxication", "Strength": 0.5, "DurationSec": 10.0 }
-      ]
-    },
-    {
-      "DamageTypes": [ "PiercingAttack" ],
-      "MinDamage": 1.0,
-      "BodyParts": [],
-      "RequireWeaponStackAttributes": [
-        { "Key": "codamageeffects:poisoned", "Value": "true" }
-      ],
-      "ChancePct": 100.0,
-      "Effects": [
-        { "Type": "Poison", "Strength": 0.5, "DurationSec": 15.0 }
-      ]
-    },
-    {
-      "DamageTypes": [ "BluntAttack" ],
-      "MinDamage": 5.0,
-      "BodyParts": [],
-      "AttackSource": "Melee",
-      "Handedness": "MainHand",
-      "ChancePct": 50.0,
-      "Effects": [
-        { "Type": "Dismount", "Strength": 1.0, "DurationSec": 0.0 }
-      ]
-    },
-    {
-      "DamageTypes": [ "SlashingAttack", "BluntAttack", "PiercingAttack" ],
-      "MinDamage": 2.0,
-      "BodyParts": [],
-      "AttackSource": "Melee",
-      "WeaponGrip": "TwoHandedOnly",
-      "TargetMounted": true,
-      "ChancePct": 85.0,
-      "Effects": [
-        { "Type": "Dismount", "Strength": 1.0, "DurationSec": 0.0 }
-      ]
-    },
-    {
-      "DamageTypes": [ "SlashingAttack", "BluntAttack" ],
-      "MinDamage": 6.0,
-      "BodyParts": [],
-      "AttackSource": "Melee",
-      "WeaponGrip": "TwoHandedOnly",
-      "ChancePct": 45.0,
-      "Effects": [
-        { "Type": "Knockdown", "Strength": 1.0, "DurationSec": 2.0 },
-        { "Type": "Slow",      "Strength": 0.5, "DurationSec": 5.0 }
-      ]
-    },
-    {
-      "DamageTypes": [],
-      "MinDamage": 0.5,
-      "BodyParts": [],
-      "AttackSource": "Melee",
-      "AttackerMounted": true,
-      "ChancePct": 100.0,
-      "Effects": [
-        { "Type": "DamageMultiplier", "Strength": 1.35, "DurationSec": 0.0 }
       ]
     },
     {
