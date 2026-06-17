@@ -27,8 +27,9 @@
 
   <!-- ── Mod dependency (controls modinfo.json "dependencies" block) ────────── -->
   <ItemGroup>
-    <Dependencies Include="overhaullib" Version="1.21.0" />
+    <Dependencies Include="overhaullib" Version="" />
   </ItemGroup>
+
 
   <!--
     ── Game & overhaullib path resolution ────────────────────────────────────
